@@ -8,7 +8,6 @@ branches:
 jobs:
 build:
 
-```
 runs-on: ubuntu-latest
 
 permissions:
@@ -34,4 +33,4 @@ steps:
       push: true
       tags: |
         ghcr.io/ccode-php/vuemonitoring:v1.0.${{ github.run_number }}
-```
+
