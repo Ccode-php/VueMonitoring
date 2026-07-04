@@ -1,43 +1,34 @@
+```vue
 <template>
 
     <div>
 
-        <h1 class="text-3xl font-bold mb-5">
-
+        <h1 class="text-3xl font-bold mb-6">
             Qurilmalar
-
         </h1>
 
-        <div class="bg-white rounded shadow overflow-x-auto">
+        <div class="bg-white rounded-lg shadow overflow-x-auto">
 
             <table class="w-full">
 
-                <thead>
+                <thead class="bg-gray-100">
 
-                    <tr class="border-b bg-gray-100">
+                    <tr>
 
-                        <th class="p-3 text-left">
-                            IP Manzil
+                        <th class="text-left p-3">
+                            Nomi
                         </th>
 
-                        <th class="p-3 text-left">
-                            MAC Manzil
+                        <th class="text-left p-3">
+                            IP manzil
                         </th>
 
-                        <th class="p-3 text-left">
-                            Qurilma nomi
+                        <th class="text-left p-3">
+                            MAC manzil
                         </th>
 
-                        <th class="p-3 text-left">
-                            Ishlab chiqaruvchi
-                        </th>
-
-                        <th class="p-3 text-center">
+                        <th class="text-center p-3">
                             Holati
-                        </th>
-
-                        <th class="p-3 text-left">
-                            So‘nggi hodisa
                         </th>
 
                     </tr>
@@ -46,8 +37,12 @@
 
                 <tbody>
 
-                    <tr v-for="device in devices" :key="device.id"
-                        class="border-b hover:bg-blue-50 cursor-pointer transition" @click="goDevice(device.id)">
+                    <tr v-for="device in devices" :key="device.id" class="border-b hover:bg-gray-50 cursor-pointer"
+                        @click="goDevice(device.id)">
+
+                        <td class="p-3">
+                            {{ device.name || '-' }}
+                        </td>
 
                         <td class="p-3">
                             {{ device.ip_address }}
@@ -57,54 +52,16 @@
                             {{ device.mac_address }}
                         </td>
 
-                        <td class="p-3">
-                            {{ device.hostname || '-' }}
-                        </td>
+                        <td class="text-center">
 
-                        <td class="p-3">
-                            {{ device.vendor || '-' }}
-                        </td>
-
-                        <td class="p-3 text-center">
-
-                            <span v-if="device.status === 'ONLINE'"
-                                class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold">
+                            <span v-if="device.status == 'ONLINE'"
+                                class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
                                 Online
                             </span>
 
-                            <span v-else class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold">
+                            <span v-else class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm">
                                 Offline
                             </span>
-
-                        </td>
-
-                        <td class="p-3">
-
-                            <div v-if="device.last_event" class="space-y-1">
-
-                                <div class="font-bold text-yellow-700">
-
-                                    {{ device.last_event }}
-
-                                </div>
-
-                                <div class="text-sm text-gray-600">
-
-                                    {{ device.last_event_message }}
-
-                                </div>
-
-                                <div class="text-xs text-gray-400">
-
-                                    {{ formatDate(device.last_event_at) }}
-
-                                </div>
-
-                            </div>
-
-                            <div v-else class="text-gray-400">
-                                Hodisa mavjud emas
-                            </div>
 
                         </td>
 
@@ -122,11 +79,7 @@
 
 <script setup>
 
-import {
-    ref,
-    onMounted,
-    onUnmounted
-} from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 import { useRouter } from 'vue-router'
 
@@ -136,48 +89,35 @@ const router = useRouter()
 
 const devices = ref([])
 
-let intervalId = null
+let timer = null
 
 const loadDevices = async () => {
 
-    const response =
-        await api.get('/devices')
+    const res = await api.get('/devices')
 
-    devices.value =
-        response.data.data
+    devices.value = res.data.data
+
 }
 
 const goDevice = (id) => {
 
-    router.push(
-        '/devices/' + id
-    )
-}
+    router.push('/devices/' + id)
 
-const formatDate = (date) => {
-
-    if (!date) {
-        return '-'
-    }
-
-    return new Date(date)
-        .toLocaleString()
 }
 
 onMounted(() => {
 
     loadDevices()
 
-    intervalId =
-        setInterval(
-            loadDevices,
-            55000
-        )
+    timer = setInterval(loadDevices, 60000)
+
 })
 
 onUnmounted(() => {
 
-    clearInterval(intervalId)
+    clearInterval(timer)
+
 })
 
 </script>
+```
