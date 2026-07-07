@@ -1,4 +1,3 @@
-```vue
 <template>
 
     <div>
@@ -15,23 +14,25 @@
 
                     <tr>
 
-                        <th class="text-left p-3">
+                        <th class="p-3 text-left">
                             Nomi
                         </th>
 
-                        <th class="text-left p-3">
+                        <th class="p-3 text-left">
                             IP manzil
                         </th>
 
-                        <th class="text-left p-3">
+                        <th class="p-3 text-left">
                             MAC manzil
                         </th>
 
-                        <th class="text-center p-3">
+                        <th class="p-3 text-center">
                             Holati
                         </th>
 
-                        <th>So'nggi hodisa</th>
+                        <th class="p-3 text-left">
+                            So'nggi hodisa
+                        </th>
 
                     </tr>
 
@@ -39,8 +40,12 @@
 
                 <tbody>
 
-                    <tr v-for="device in devices" :key="device.id" class="border-b hover:bg-gray-50 cursor-pointer"
-                        @click="goDevice(device.id)">
+                    <tr
+                        v-for="device in devices"
+                        :key="device.id"
+                        class="border-b hover:bg-gray-50 cursor-pointer"
+                        @click="goDevice(device.id)"
+                    >
 
                         <td class="p-3">
                             {{ device.name || '-' }}
@@ -54,21 +59,34 @@
                             {{ device.mac_address }}
                         </td>
 
-                        <td class="text-center">
+                        <td class="p-3 text-center">
 
-                            <span v-if="device.status == 'ONLINE'"
-                                class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
+                            <span
+                                v-if="device.status === 'ONLINE'"
+                                class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm"
+                            >
                                 Online
                             </span>
 
-                            <span v-else class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm">
+                            <span
+                                v-else
+                                class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm"
+                            >
                                 Offline
                             </span>
 
                         </td>
 
-                        <td>
-                            {{ device.latest_log?.message || '-' }}
+                        <td class="p-3">
+
+                            <span v-if="device.latest_log">
+                                {{ eventName(device.latest_log.event_type) }}
+                            </span>
+
+                            <span v-else>
+                                -
+                            </span>
+
                         </td>
 
                     </tr>
@@ -86,9 +104,7 @@
 <script setup>
 
 import { ref, onMounted, onUnmounted } from 'vue'
-
 import { useRouter } from 'vue-router'
-
 import api from '../api/axios'
 
 const router = useRouter()
@@ -102,13 +118,30 @@ const loadDevices = async () => {
     const res = await api.get('/devices')
 
     devices.value = res.data.data
-
 }
 
 const goDevice = (id) => {
 
     router.push('/devices/' + id)
+}
 
+const eventName = (event) => {
+
+    const events = {
+
+        NEW_DEVICE: 'Yangi qurilma',
+
+        IP_CHANGED: 'IP o‘zgardi',
+
+        MAC_CHANGED: 'MAC o‘zgardi',
+
+        DEVICE_OFFLINE: 'Offline bo‘ldi',
+
+        DEVICE_ONLINE: 'Online bo‘ldi',
+
+    }
+
+    return events[event] || event
 }
 
 onMounted(() => {
@@ -116,14 +149,11 @@ onMounted(() => {
     loadDevices()
 
     timer = setInterval(loadDevices, 60000)
-
 })
 
 onUnmounted(() => {
 
     clearInterval(timer)
-
 })
 
 </script>
-```
