@@ -31,6 +31,8 @@
                             Holati
                         </th>
 
+                        <th>So'nggi hodisa</th>
+
                     </tr>
 
                 </thead>
@@ -63,6 +65,10 @@
                                 Offline
                             </span>
 
+                        </td>
+
+                        <td>
+                            {{ eventName(device.latest_log?.event_type) }}
                         </td>
 
                     </tr>
