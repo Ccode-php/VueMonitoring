@@ -68,7 +68,7 @@
                         </td>
 
                         <td>
-                            {{ eventName(device.latest_log?.event_type) }}
+                            {{ device.latest_log?.message || '-' }}
                         </td>
 
                     </tr>
