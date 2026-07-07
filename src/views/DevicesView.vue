@@ -40,12 +40,8 @@
 
                 <tbody>
 
-                    <tr
-                        v-for="device in devices"
-                        :key="device.id"
-                        class="border-b hover:bg-gray-50 cursor-pointer"
-                        @click="goDevice(device.id)"
-                    >
+                    <tr v-for="device in devices" :key="device.id" class="border-b hover:bg-gray-50 cursor-pointer"
+                        @click="goDevice(device.id)">
 
                         <td class="p-3">
                             {{ device.name || '-' }}
@@ -61,17 +57,12 @@
 
                         <td class="p-3 text-center">
 
-                            <span
-                                v-if="device.status === 'ONLINE'"
-                                class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm"
-                            >
+                            <span v-if="device.status === 'ONLINE'"
+                                class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
                                 Online
                             </span>
 
-                            <span
-                                v-else
-                                class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm"
-                            >
+                            <span v-else class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm">
                                 Offline
                             </span>
 
@@ -79,13 +70,21 @@
 
                         <td class="p-3">
 
-                            <span v-if="device.latest_log">
-                                {{ eventName(device.latest_log.event_type) }}
-                            </span>
+                            <div v-if="device.latest_log">
 
-                            <span v-else>
+                                <div class="font-semibold">
+                                    {{ eventName(device.latest_log.event_type) }}
+                                </div>
+
+                                <div class="text-xs text-gray-500">
+                                    {{ device.latest_log.message }}
+                                </div>
+
+                            </div>
+
+                            <div v-else>
                                 -
-                            </span>
+                            </div>
 
                         </td>
 
