@@ -2,68 +2,151 @@
 
     <div>
 
-        <h1 class="text-3xl font-bold mb-5">
+        <h1 class="text-3xl font-bold mb-6">
             Tarmoq Boshqaruv Paneli
         </h1>
 
-        <div class="grid grid-cols-5 gap-5 mb-5">
+        <!-- Statistika -->
 
-            <div class="bg-white p-5 rounded shadow">
+        <div class="grid grid-cols-5 gap-5 mb-6">
 
+            <div class="bg-white rounded-lg shadow p-5">
                 <div class="text-gray-500">
-                    Jami Qurilmalar
+                    Jami qurilmalar
                 </div>
 
                 <div class="text-3xl font-bold">
                     {{ stats.total }}
                 </div>
-
             </div>
 
-            <div class="bg-white p-5 rounded shadow">
-
+            <div class="bg-white rounded-lg shadow p-5">
                 <div class="text-gray-500">
-                    Online Qurilmalar
+                    Online
                 </div>
 
-                <div class="text-3xl font-bold text-green-500">
+                <div class="text-3xl font-bold text-green-600">
                     {{ stats.online }}
                 </div>
-
             </div>
 
-            <div class="bg-white p-5 rounded shadow">
-
+            <div class="bg-white rounded-lg shadow p-5">
                 <div class="text-gray-500">
-                    Offline Qurilmalar
+                    Offline
                 </div>
 
-                <div class="text-3xl font-bold text-red-500">
+                <div class="text-3xl font-bold text-red-600">
                     {{ stats.offline }}
                 </div>
-
             </div>
 
-            <div class="bg-white p-5 rounded shadow">
-
+            <div class="bg-white rounded-lg shadow p-5">
                 <div class="text-gray-500">
-                    Jami Tarmoqlar
+                    Tarmoqlar
                 </div>
 
-                <div class="text-3xl font-bold text-blue-500">
+                <div class="text-3xl font-bold text-blue-600">
                     {{ stats.totalNetworks }}
                 </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-5">
+                <div class="text-gray-500">
+                    Faol tarmoqlar
+                </div>
+
+                <div class="text-3xl font-bold text-green-600">
+                    {{ stats.activeNetworks }}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Network Map (hozircha oddiy) -->
+
+        <div class="bg-white rounded-lg shadow p-5 mb-6">
+
+            <h2 class="text-xl font-bold mb-4">
+                Tarmoq sxemasi
+            </h2>
+
+            <div class="flex flex-wrap gap-3">
+
+                <div
+                    v-for="device in devices"
+                    :key="device.id"
+                    class="border rounded-lg p-3 w-48"
+                    :class="device.status=='ONLINE'
+                        ? 'border-green-400 bg-green-50'
+                        : 'border-red-400 bg-red-50'">
+
+                    <div class="font-bold">
+                        {{ device.name || 'Nomaʼlum' }}
+                    </div>
+
+                    <div class="text-sm text-gray-600">
+                        {{ device.ip_address }}
+                    </div>
+
+                    <div class="text-xs mt-2">
+
+                        <span
+                            v-if="device.status=='ONLINE'"
+                            class="text-green-600">
+
+                            🟢 Online
+
+                        </span>
+
+                        <span
+                            v-else
+                            class="text-red-600">
+
+                            🔴 Offline
+
+                        </span>
+
+                    </div>
+
+                </div>
 
             </div>
 
-            <div class="bg-white p-5 rounded shadow">
+        </div>
 
-                <div class="text-gray-500">
-                    Faol Tarmoqlar
+        <!-- So'nggi hodisalar -->
+
+        <div class="bg-white rounded-lg shadow p-5">
+
+            <h2 class="text-xl font-bold mb-4">
+                So'nggi hodisalar
+            </h2>
+
+            <div
+                v-for="log in logs"
+                :key="log.id"
+                class="border-b py-3">
+
+                <div class="flex justify-between">
+
+                    <div class="font-semibold">
+
+                        {{ eventName(log.event_type) }}
+
+                    </div>
+
+                    <div class="text-sm text-gray-500">
+
+                        {{ formatDate(log.created_at) }}
+
+                    </div>
+
                 </div>
 
-                <div class="text-3xl font-bold text-green-500">
-                    {{ stats.activeNetworks }}
+                <div class="text-gray-700">
+
+                    {{ log.message }}
+
                 </div>
 
             </div>
@@ -72,8 +155,7 @@
 
     </div>
 
-</template> 
-
+</template>
 
 <script setup>
 
@@ -81,83 +163,87 @@ import {
     ref,
     onMounted,
     onUnmounted
-}
-from 'vue'
+} from 'vue'
 
 import api from '../api/axios'
 
-let intervalId = null
+const stats = ref({})
 
-const stats = ref({
+const logs = ref([])
 
-    total: 0,
+const devices = ref([])
 
-    online: 0,
-
-    offline: 0,
-
-    totalNetworks: 0,
-
-    activeNetworks: 0,
-})
+let timer = null
 
 const loadData = async () => {
 
     try {
 
-        const devicesResponse =
-            await api.get('/devices')
+        const res =
+            await api.get('/dashboard')
 
-        const devices =
-            devicesResponse.data.data || []
+        stats.value =
+            res.data.stats
 
-        stats.value.total =
-            devices.length
+        logs.value =
+            res.data.logs
 
-        stats.value.online =
-            devices.filter(
-                d => d.status === 'ONLINE'
-            ).length
+        devices.value =
+            res.data.devices
 
-        stats.value.offline =
-            devices.filter(
-                d => d.status === 'OFFLINE'
-            ).length
+    } catch (err) {
 
-        const networksResponse =
-            await api.get('/scan-tasks')
+        console.log(err)
 
-        const networks =
-            networksResponse.data || []
-
-        stats.value.totalNetworks =
-            networks.length
-
-        stats.value.activeNetworks =
-            networks.filter(
-                n => n.enabled
-            ).length
-
-    } catch (error) {
-
-        console.log(error)
     }
+
+}
+
+const formatDate = (date) => {
+
+    if (!date)
+        return '-'
+
+    return new Date(date).toLocaleString()
+
+}
+
+const eventName = (event) => {
+
+    const events = {
+
+        NEW_DEVICE: 'Yangi qurilma',
+
+        DEVICE_ONLINE: 'Online bo‘ldi',
+
+        DEVICE_OFFLINE: 'Offline bo‘ldi',
+
+        IP_CHANGED: 'IP o‘zgardi',
+
+        MAC_CHANGED: 'MAC o‘zgardi',
+
+    }
+
+    return events[event] || event
+
 }
 
 onMounted(() => {
 
     loadData()
 
-    intervalId =
+    timer =
         setInterval(
             loadData,
             55000
         )
+
 })
 
 onUnmounted(() => {
 
-    clearInterval(intervalId)
+    clearInterval(timer)
+
 })
 
 </script>
