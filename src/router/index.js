@@ -8,6 +8,8 @@ import DeviceDetailView from '../views/DeviceDetailView.vue'
 
 import ScanView from '../views/ScanView.vue'
 
+import TopologyView from '../views/TopologyView.vue'
+
 const router = createRouter({
 
     history: createWebHistory(),
@@ -32,6 +34,11 @@ const router = createRouter({
         {
             path: '/scan',
             component: ScanView,
+        },
+
+        {
+            path: '/topology',
+            component: TopologyView,
         },
     ],
 })
