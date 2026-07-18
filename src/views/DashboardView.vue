@@ -8,56 +8,66 @@
 
         <!-- Statistika -->
 
-        <div class="grid grid-cols-5 gap-5 mb-6">
+        <div class="grid lg:grid-cols-5 md:grid-cols-2 gap-5 mb-8">
 
-            <div class="bg-white rounded-lg shadow p-5">
-                <div class="text-gray-500">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-xl p-6 shadow">
+
+                <div class="text-sm opacity-80">
                     Jami qurilmalar
                 </div>
 
-                <div class="text-3xl font-bold">
-                    {{ stats.total }}
+                <div class="text-4xl font-bold mt-2">
+                    {{ stats.totalDevices }}
                 </div>
+
             </div>
 
-            <div class="bg-white rounded-lg shadow p-5">
-                <div class="text-gray-500">
+            <div class="bg-gradient-to-r from-green-500 to-green-700 text-white rounded-xl p-6 shadow">
+
+                <div class="text-sm opacity-80">
                     Online
                 </div>
 
-                <div class="text-3xl font-bold text-green-600">
-                    {{ stats.online }}
+                <div class="text-4xl font-bold mt-2">
+                    {{ stats.onlineDevices }}
                 </div>
+
             </div>
 
-            <div class="bg-white rounded-lg shadow p-5">
-                <div class="text-gray-500">
+            <div class="bg-gradient-to-r from-red-500 to-red-700 text-white rounded-xl p-6 shadow">
+
+                <div class="text-sm opacity-80">
                     Offline
                 </div>
 
-                <div class="text-3xl font-bold text-red-600">
-                    {{ stats.offline }}
+                <div class="text-4xl font-bold mt-2">
+                    {{ stats.offlineDevices }}
                 </div>
+
             </div>
 
-            <div class="bg-white rounded-lg shadow p-5">
-                <div class="text-gray-500">
+            <div class="bg-gradient-to-r from-indigo-500 to-indigo-700 text-white rounded-xl p-6 shadow">
+
+                <div class="text-sm opacity-80">
                     Tarmoqlar
                 </div>
 
-                <div class="text-3xl font-bold text-blue-600">
+                <div class="text-4xl font-bold mt-2">
                     {{ stats.totalNetworks }}
                 </div>
+
             </div>
 
-            <div class="bg-white rounded-lg shadow p-5">
-                <div class="text-gray-500">
-                    Faol tarmoqlar
+            <div class="bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-xl p-6 shadow">
+
+                <div class="text-sm opacity-80">
+                    Faol
                 </div>
 
-                <div class="text-3xl font-bold text-green-600">
+                <div class="text-4xl font-bold mt-2">
                     {{ stats.activeNetworks }}
                 </div>
+
             </div>
 
         </div>
@@ -70,39 +80,50 @@
                 Tarmoq sxemasi
             </h2>
 
-            <div class="flex flex-wrap gap-3">
+            <div class="grid lg:grid-cols-4 md:grid-cols-2 gap-5">
 
-                <div
-                    v-for="device in devices"
-                    :key="device.id"
-                    class="border rounded-lg p-3 w-48"
-                    :class="device.status=='ONLINE'
-                        ? 'border-green-400 bg-green-50'
-                        : 'border-red-400 bg-red-50'">
+                <div v-for="device in devices" :key="device.id"
+                    class="rounded-xl shadow-lg p-5 bg-white hover:shadow-2xl transition">
 
-                    <div class="font-bold">
-                        {{ device.name || 'Nomaʼlum' }}
+                    <div class="flex items-center justify-between">
+
+                        <div class="font-bold text-lg">
+
+                            {{ device.name || "Noma'lum" }}
+
+                        </div>
+
+                        <div class="w-4 h-4 rounded-full" :class="device.status == 'ONLINE'
+                            ? 'bg-green-500'
+                            : 'bg-red-500'">
+
+                        </div>
+
                     </div>
 
-                    <div class="text-sm text-gray-600">
+                    <div class="mt-3 text-gray-600">
+
                         {{ device.ip_address }}
+
                     </div>
 
-                    <div class="text-xs mt-2">
+                    <div class="text-xs text-gray-400">
 
-                        <span
-                            v-if="device.status=='ONLINE'"
-                            class="text-green-600">
+                        {{ device.mac_address }}
 
-                            🟢 Online
+                    </div>
+
+                    <div class="mt-4">
+
+                        <span v-if="device.status == 'ONLINE'" class="px-3 py-1 rounded-full bg-green-100 text-green-700">
+
+                            ONLINE
 
                         </span>
 
-                        <span
-                            v-else
-                            class="text-red-600">
+                        <span v-else class="px-3 py-1 rounded-full bg-red-100 text-red-700">
 
-                            🔴 Offline
+                            OFFLINE
 
                         </span>
 
@@ -122,10 +143,7 @@
                 So'nggi hodisalar
             </h2>
 
-            <div
-                v-for="log in logs"
-                :key="log.id"
-                class="border-b py-3">
+            <div v-for="log in logs" :key="log.id" class="border-b py-3">
 
                 <div class="flex justify-between">
 
