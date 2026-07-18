@@ -72,68 +72,6 @@
 
         </div>
 
-        <!-- Network Map (hozircha oddiy) -->
-
-        <div class="bg-white rounded-lg shadow p-5 mb-6">
-
-            <h2 class="text-xl font-bold mb-4">
-                Tarmoq sxemasi
-            </h2>
-
-            <div class="grid lg:grid-cols-4 md:grid-cols-2 gap-5">
-
-                <div v-for="device in devices" :key="device.id"
-                    class="rounded-xl shadow-lg p-5 bg-white hover:shadow-2xl transition">
-
-                    <div class="flex items-center justify-between">
-
-                        <div class="font-bold text-lg">
-
-                            {{ device.name || "Noma'lum" }}
-
-                        </div>
-
-                        <div class="w-4 h-4 rounded-full" :class="device.status == 'ONLINE'
-                            ? 'bg-green-500'
-                            : 'bg-red-500'">
-
-                        </div>
-
-                    </div>
-
-                    <div class="mt-3 text-gray-600">
-
-                        {{ device.ip_address }}
-
-                    </div>
-
-                    <div class="text-xs text-gray-400">
-
-                        {{ device.mac_address }}
-
-                    </div>
-
-                    <div class="mt-4">
-
-                        <span v-if="device.status == 'ONLINE'" class="px-3 py-1 rounded-full bg-green-100 text-green-700">
-
-                            ONLINE
-
-                        </span>
-
-                        <span v-else class="px-3 py-1 rounded-full bg-red-100 text-red-700">
-
-                            OFFLINE
-
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
 
         <!-- So'nggi hodisalar -->
 
@@ -189,8 +127,6 @@ const stats = ref({})
 
 const logs = ref([])
 
-const devices = ref([])
-
 let timer = null
 
 const loadData = async () => {
@@ -205,9 +141,6 @@ const loadData = async () => {
 
         logs.value =
             res.data.logs
-
-        devices.value =
-            res.data.devices
 
     } catch (err) {
 
