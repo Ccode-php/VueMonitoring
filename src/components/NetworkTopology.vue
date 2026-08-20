@@ -2,9 +2,10 @@
 
     <div style="height: 700px">
 
-        <VueFlow v-model:nodes="nodes" v-model:edges="edges" fit-view-on-init>
+        <VueFlow v-model:nodes="nodes" v-model:edges="edges" fit-view-on-init :fit-view="true" :min-zoom="0.2"
+            :max-zoom="2">
 
-            <Background />
+            <Background :gap="20" />
 
             <MiniMap />
 
@@ -18,7 +19,7 @@
 
 <script setup>
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import api from '../api/axios'
 
 import {
@@ -40,6 +41,7 @@ import {
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 
+
 const nodes = ref([])
 
 const edges = ref([])
@@ -54,14 +56,7 @@ const loadTopology = async () => {
 
 }
 
-const createNodes = () => {
-
-nodes.value = []
-edges.value = []
-
-let switchY = 50
-
-topology.value.forEach((sw) => {
+const drawSwitch = (sw, x, y) => {
 
     const switchId = "switch-" + sw.id
 
@@ -70,28 +65,53 @@ topology.value.forEach((sw) => {
         id: switchId,
 
         position: {
-
-            x: 400,
-            y: switchY,
-
+            x,
+            y
         },
 
         data: {
-
-            label: "🌐 " + (sw.hostname || sw.ip)
-
+            label: "🌐 " + sw.hostname
         }
 
     })
 
-    let deviceY = switchY
+    let childY = y
 
-    sw.ports.forEach((port) => {
+    sw.children.forEach(child => {
 
-        port.devices.forEach((device, index) => {
+        const childId = "switch-" + child.id
 
-            const deviceId =
-                "device-" + device.id
+        edges.value.push({
+
+            id: switchId + "-" + childId,
+
+            source: switchId,
+
+            target: childId
+
+        })
+
+        drawSwitch(
+
+            child,
+
+            x + 280,
+
+            childY
+
+        )
+
+        childY += 220
+
+    })
+
+    let deviceY = y + 70
+
+    sw.ports.forEach(port => {
+
+        port.devices.forEach(device => {
+
+            const deviceId = "device-" + device.id
 
             nodes.value.push({
 
@@ -99,7 +119,7 @@ topology.value.forEach((sw) => {
 
                 position: {
 
-                    x: 750,
+                    x,
 
                     y: deviceY
 
@@ -108,6 +128,7 @@ topology.value.forEach((sw) => {
                 data: {
 
                     label:
+                        "💻 " +
                         (device.name || device.ip)
 
                 }
@@ -116,29 +137,49 @@ topology.value.forEach((sw) => {
 
             edges.value.push({
 
-                id:
-                    switchId + "-" + deviceId,
+                id: switchId + "-" + deviceId,
 
-                source:
-                    switchId,
+                source: switchId,
 
-                target:
-                    deviceId,
+                target: deviceId,
 
-                label:
-                    port.port
+                label: port.port
 
             })
 
-            deviceY += 90
+            deviceY += 70
 
         })
 
     })
 
-    switchY += 350
+}
 
-})
+
+
+const createNodes = () => {
+
+    nodes.value = []
+
+    edges.value = []
+
+    let currentY = 50
+
+    topology.value.forEach(root => {
+
+        drawSwitch(
+
+            root,
+
+            100,
+
+            currentY
+
+        )
+
+        currentY += 450
+
+    })
 
 }
 

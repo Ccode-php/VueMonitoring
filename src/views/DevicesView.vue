@@ -2,157 +2,483 @@
 
     <div>
 
-        <h1 class="text-3xl font-bold mb-6">
-            Qurilmalar
-        </h1>
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-3">
 
-        <div class="bg-white rounded-lg shadow overflow-x-auto">
+            <div>
 
-            <table class="w-full">
+                <h1 class="text-3xl font-bold">
+                    Qurilmalar
+                </h1>
 
-                <thead class="bg-gray-100">
+                <div class="text-gray-500 mt-2">
 
-                    <tr>
+                    Topildi
 
-                        <th class="p-3 text-left">
-                            Nomi
-                        </th>
+                    <span class="font-semibold">
+                        {{ pagination.total || 0 }}
+                    </span>
 
-                        <th class="p-3 text-left">
-                            IP manzil
-                        </th>
+                    ta qurilma
 
-                        <th class="p-3 text-left">
-                            MAC manzil
-                        </th>
+                </div>
 
-                        <th class="p-3 text-center">
-                            Holati
-                        </th>
+            </div>
 
-                        <th class="p-3 text-left">
-                            So'nggi hodisa
-                        </th>
+            <div class="text-sm text-gray-400">
 
-                    </tr>
+                Oxirgi yangilanish:
 
-                </thead>
+                {{ lastRefresh }}
 
-                <tbody>
-
-                    <tr v-for="device in devices" :key="device.id" class="border-b hover:bg-gray-50 cursor-pointer"
-                        @click="goDevice(device.id)">
-
-                        <td class="p-3">
-                            {{ device.name || '-' }}
-                        </td>
-
-                        <td class="p-3">
-                            {{ device.ip_address }}
-                        </td>
-
-                        <td class="p-3">
-                            {{ device.mac_address }}
-                        </td>
-
-                        <td class="p-3 text-center">
-
-                            <span v-if="device.status === 'ONLINE'"
-                                class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
-                                Online
-                            </span>
-
-                            <span v-else class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm">
-                                Offline
-                            </span>
-
-                        </td>
-
-                        <td class="p-3">
-
-                            <div v-if="device.latest_log">
-
-                                <div class="font-semibold">
-                                    {{ eventName(device.latest_log.event_type) }}
-                                </div>
-
-                                <div class="text-xs text-gray-500">
-                                    {{ device.latest_log.message }}
-                                </div>
-
-                            </div>
-
-                            <div v-else>
-                                -
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-                </tbody>
-
-            </table>
+            </div>
 
         </div>
+
+
+        <!-- Search -->
+
+        <DeviceFilter
+            v-model:search="search"
+        />
+
+
+        <!-- Table -->
+
+        <DeviceTable
+            :devices="devices"
+            @select="goDevice"
+        />
+
+
+        <!-- Notification -->
+
+        <Notification
+            :show="notification.show"
+            :title="notification.title"
+            :message="notification.message"
+        />
+
+
+        <!-- Pagination -->
+
+        <Pagination
+            :pagination="pagination"
+            @change="changePage"
+        />
 
     </div>
 
 </template>
 
+
 <script setup>
 
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import {
+    ref,
+    onMounted,
+    onUnmounted,
+    watch
+} from 'vue'
+
+import {
+    useRouter
+} from 'vue-router'
+
 import api from '../api/axios'
+
+import DeviceFilter
+    from '../components/devices/DeviceFilter.vue'
+
+import DeviceTable
+    from '../components/devices/DeviceTable.vue'
+
+import Notification
+    from '../components/common/Notification.vue'
+
+import Pagination
+    from '../components/common/Pagination.vue'
+
+
+/*
+|--------------------------------------------------------------------------
+| Router
+|--------------------------------------------------------------------------
+*/
 
 const router = useRouter()
 
+
+/*
+|--------------------------------------------------------------------------
+| State
+|--------------------------------------------------------------------------
+*/
+
 const devices = ref([])
+
+const pagination = ref({})
+
+const search = ref('')
+
+const lastRefresh = ref('-')
+
+const firstLoad = ref(true)
 
 let timer = null
 
-const loadDevices = async () => {
+let searchTimer = null
 
-    const res = await api.get('/devices')
 
-    devices.value = res.data.data
-}
+/*
+|--------------------------------------------------------------------------
+| Notification
+|--------------------------------------------------------------------------
+*/
 
-const goDevice = (id) => {
+const notification = ref({
 
-    router.push('/devices/' + id)
-}
+    show: false,
 
-const eventName = (event) => {
+    title: '',
 
-    const events = {
+    message: ''
 
-        NEW_DEVICE: 'Yangi qurilma',
+})
 
-        IP_CHANGED: 'IP o‘zgardi',
 
-        MAC_CHANGED: 'MAC o‘zgardi',
+const audio = new Audio('/notification.mp3')
 
-        DEVICE_OFFLINE: 'Offline bo‘ldi',
 
-        DEVICE_ONLINE: 'Online bo‘ldi',
+/*
+|--------------------------------------------------------------------------
+| Load devices
+|--------------------------------------------------------------------------
+*/
+
+const loadDevices = async (
+    page = 1,
+    showNotification = false
+) => {
+
+    try {
+
+        const oldDevices = JSON.parse(
+            JSON.stringify(devices.value)
+        )
+
+
+        const res = await api.get(
+            '/devices',
+            {
+                params: {
+
+                    page,
+
+                    search: search.value
+
+                }
+
+            }
+        )
+
+
+        devices.value =
+            res.data.data
+
+
+        pagination.value = {
+
+            current_page:
+                res.data.current_page,
+
+            last_page:
+                res.data.last_page,
+
+            total:
+                res.data.total,
+
+            per_page:
+                res.data.per_page
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Notification faqat AUTO REFRESH paytida
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            showNotification &&
+            !firstLoad.value
+        ) {
+
+            checkChanges(
+                oldDevices,
+                devices.value
+            )
+
+        }
+
+
+        firstLoad.value = false
+
+
+    } catch (err) {
+
+        console.error(
+            'Devices load error:',
+            err
+        )
 
     }
 
-    return events[event] || event
+
+    lastRefresh.value =
+        new Date().toLocaleTimeString()
+
 }
+
+
+/*
+|--------------------------------------------------------------------------
+| Detect changes
+|--------------------------------------------------------------------------
+*/
+
+const checkChanges = (
+    oldDevices,
+    newDevices
+) => {
+
+    newDevices.forEach(device => {
+
+        const previous =
+            oldDevices.find(
+                item =>
+                    item.id === device.id
+            )
+
+
+        /*
+        | New device
+        */
+
+        if (!previous) {
+
+            notify(
+
+                'Yangi qurilma',
+
+                `${device.name || 'Noma\'lum'} (${device.ip_address})`
+
+            )
+
+            return
+        }
+
+
+        /*
+        | Status changed
+        */
+
+        if (
+            previous.status !==
+            device.status
+        ) {
+
+            if (
+                device.status === 'ONLINE'
+            ) {
+
+                notify(
+
+                    'Qurilma online',
+
+                    `${device.name || 'Noma\'lum'} (${device.ip_address})`
+
+                )
+
+            } else {
+
+                notify(
+
+                    'Qurilma offline',
+
+                    `${device.name || 'Noma\'lum'} (${device.ip_address})`
+
+                )
+
+            }
+
+        }
+
+    })
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Pagination
+|--------------------------------------------------------------------------
+*/
+
+const changePage = (
+    page
+) => {
+
+    if (
+        page < 1 ||
+        page > pagination.value.last_page
+    ) {
+
+        return
+
+    }
+
+
+    /*
+    | Paginationda notification YO‘Q
+    */
+
+    loadDevices(
+        page,
+        false
+    )
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Open device
+|--------------------------------------------------------------------------
+*/
+
+const goDevice = (
+    id
+) => {
+
+    router.push(
+        '/devices/' + id
+    )
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Notification
+|--------------------------------------------------------------------------
+*/
+
+const notify = (
+    title,
+    message
+) => {
+
+    notification.value = {
+
+        show: true,
+
+        title,
+
+        message
+
+    }
+
+
+    audio
+        .play()
+        .catch(() => {})
+
+
+    setTimeout(() => {
+
+        notification.value.show = false
+
+    }, 4000)
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Search
+|--------------------------------------------------------------------------
+*/
+
+watch(
+    search,
+    () => {
+
+        clearTimeout(
+            searchTimer
+        )
+
+
+        searchTimer =
+            setTimeout(() => {
+
+                /*
+                | Qidiruv boshlanganda
+                | 1-sahifaga qaytamiz
+                */
+
+                loadDevices(
+                    1,
+                    false
+                )
+
+            }, 400)
+
+    }
+)
+
+
+/*
+|--------------------------------------------------------------------------
+| Auto refresh
+|--------------------------------------------------------------------------
+*/
 
 onMounted(() => {
 
-    loadDevices()
+    loadDevices(
+        1,
+        false
+    )
 
-    timer = setInterval(loadDevices, 60000)
+
+    timer = setInterval(() => {
+
+        loadDevices(
+
+            pagination.value.current_page || 1,
+
+            true
+
+        )
+
+    }, 60000)
+
 })
+
+
+/*
+|--------------------------------------------------------------------------
+| Cleanup
+|--------------------------------------------------------------------------
+*/
 
 onUnmounted(() => {
 
     clearInterval(timer)
+
+    clearTimeout(searchTimer)
+
 })
 
 </script>

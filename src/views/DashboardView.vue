@@ -2,70 +2,191 @@
 
     <div>
 
-        <h1 class="text-3xl font-bold mb-6">
-            Tarmoq Boshqaruv Paneli
-        </h1>
+        <!-- Header -->
 
-        <!-- Statistika -->
+        <div class="flex items-center justify-between mb-8">
 
-        <div class="grid lg:grid-cols-5 md:grid-cols-2 gap-5 mb-8">
+            <div>
 
-            <div class="bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-xl p-6 shadow">
+                <h1 class="text-3xl font-bold text-slate-800">
+                    Tarmoq Boshqaruv Paneli
+                </h1>
 
-                <div class="text-sm opacity-80">
-                    Jami qurilmalar
-                </div>
-
-                <div class="text-4xl font-bold mt-2">
-                    {{ stats.totalDevices }}
-                </div>
+                <p class="text-slate-500 mt-1">
+                    Tarmoqning joriy holati va qurilmalar statistikasi
+                </p>
 
             </div>
 
-            <div class="bg-gradient-to-r from-green-500 to-green-700 text-white rounded-xl p-6 shadow">
+            <button
+                @click="loadData"
+                :disabled="loading"
+                class="px-4 py-2
+                       bg-blue-600
+                       hover:bg-blue-700
+                       disabled:bg-blue-400
+                       text-white
+                       rounded-lg
+                       transition">
 
-                <div class="text-sm opacity-80">
-                    Online
+                {{ loading ? 'Yangilanmoqda...' : '🔄 Yangilash' }}
+
+            </button>
+
+        </div>
+
+
+        <!-- Statistics -->
+
+        <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+
+            <StatCard
+                title="Devices"
+                :value="stats.totalDevices ?? 0"
+                icon="💻"
+                color="bg-slate-100"
+            />
+
+            <StatCard
+                title="Online"
+                :value="stats.onlineDevices ?? 0"
+                icon="🟢"
+                color="bg-green-100"
+            />
+
+            <StatCard
+                title="Offline"
+                :value="stats.offlineDevices ?? 0"
+                icon="🔴"
+                color="bg-red-100"
+            />
+
+            <StatCard
+                title="Networks"
+                :value="stats.totalNetworks ?? 0"
+                icon="🌐"
+                color="bg-indigo-100"
+            />
+
+        </div>
+
+
+        <!-- Main information -->
+
+        <div class="grid xl:grid-cols-3 gap-6 mt-8">
+
+
+            <!-- Chart -->
+
+            <div class="xl:col-span-2
+                        bg-white
+                        rounded-2xl
+                        shadow-sm
+                        border
+                        border-slate-200
+                        p-6">
+
+                <div class="flex justify-between items-center mb-6">
+
+                    <div>
+
+                        <h2 class="text-xl font-semibold text-slate-800">
+                            Tarmoq holati
+                        </h2>
+
+                        <p class="text-sm text-slate-500 mt-1">
+                            Qurilmalarning joriy holati
+                        </p>
+
+                    </div>
+
+                    <div
+                        class="text-sm
+                               text-slate-500">
+
+                        Active networks:
+                        <span class="font-semibold text-slate-800">
+                            {{ stats.activeNetworks ?? 0 }}
+                        </span>
+
+                    </div>
+
                 </div>
 
-                <div class="text-4xl font-bold mt-2">
-                    {{ stats.onlineDevices }}
-                </div>
+                <DashboardChart
+                    :online="stats.onlineDevices"
+                    :offline="stats.offlineDevices"
+                />
 
             </div>
 
-            <div class="bg-gradient-to-r from-red-500 to-red-700 text-white rounded-xl p-6 shadow">
 
-                <div class="text-sm opacity-80">
-                    Offline
+            <!-- Last Scan -->
+
+            <div
+                class="bg-white
+                       rounded-2xl
+                       shadow-sm
+                       border
+                       border-slate-200
+                       p-6">
+
+                <h2 class="text-xl font-semibold text-slate-800">
+                    Scanner
+                </h2>
+
+                <p class="text-sm text-slate-500 mt-1">
+                    Oxirgi qurilma aniqlangan vaqt
+                </p>
+
+
+                <div class="mt-8">
+
+                    <div class="text-4xl mb-3">
+                        🕐
+                    </div>
+
+                    <div class="text-sm text-slate-500">
+                        Last Scan
+                    </div>
+
+                    <div class="text-lg font-semibold text-slate-800 mt-1">
+                        {{ formatDate(stats.lastScan) }}
+                    </div>
+
                 </div>
 
-                <div class="text-4xl font-bold mt-2">
-                    {{ stats.offlineDevices }}
-                </div>
 
-            </div>
+                <div
+                    class="mt-8
+                           border-t
+                           border-slate-200
+                           pt-5">
 
-            <div class="bg-gradient-to-r from-indigo-500 to-indigo-700 text-white rounded-xl p-6 shadow">
+                    <div class="flex justify-between">
 
-                <div class="text-sm opacity-80">
-                    Tarmoqlar
-                </div>
+                        <span class="text-slate-500">
+                            Active Networks
+                        </span>
 
-                <div class="text-4xl font-bold mt-2">
-                    {{ stats.totalNetworks }}
-                </div>
+                        <span class="font-semibold text-green-600">
+                            {{ stats.activeNetworks ?? 0 }}
+                        </span>
 
-            </div>
+                    </div>
 
-            <div class="bg-gradient-to-r from-purple-500 to-purple-700 text-white rounded-xl p-6 shadow">
+                    <div class="flex justify-between mt-3">
 
-                <div class="text-sm opacity-80">
-                    Faol
-                </div>
+                        <span class="text-slate-500">
+                            Total Networks
+                        </span>
 
-                <div class="text-4xl font-bold mt-2">
-                    {{ stats.activeNetworks }}
+                        <span class="font-semibold">
+                            {{ stats.totalNetworks ?? 0 }}
+                        </span>
+
+                    </div>
+
                 </div>
 
             </div>
@@ -73,37 +194,172 @@
         </div>
 
 
-        <!-- So'nggi hodisalar -->
+        <!-- Latest devices -->
 
-        <div class="bg-white rounded-lg shadow p-5">
+        <div
+            class="bg-white
+                   rounded-2xl
+                   shadow-sm
+                   border
+                   border-slate-200
+                   p-6
+                   mt-8">
 
-            <h2 class="text-xl font-bold mb-4">
-                So'nggi hodisalar
-            </h2>
+            <div class="flex justify-between items-center mb-5">
 
-            <div v-for="log in logs" :key="log.id" class="border-b py-3">
+                <div>
 
-                <div class="flex justify-between">
+                    <h2 class="text-xl font-semibold text-slate-800">
+                        Oxirgi qurilmalar
+                    </h2>
 
-                    <div class="font-semibold">
-
-                        {{ eventName(log.event_type) }}
-
-                    </div>
-
-                    <div class="text-sm text-gray-500">
-
-                        {{ formatDate(log.created_at) }}
-
-                    </div>
-
-                </div>
-
-                <div class="text-gray-700">
-
-                    {{ log.message }}
+                    <p class="text-sm text-slate-500 mt-1">
+                        Scanner tomonidan oxirgi aniqlangan qurilmalar
+                    </p>
 
                 </div>
+
+                <RouterLink
+                    to="/devices"
+                    class="text-blue-600
+                           hover:text-blue-700
+                           text-sm
+                           font-medium">
+
+                    Barchasini ko‘rish →
+
+                </RouterLink>
+
+            </div>
+
+
+            <div class="overflow-x-auto">
+
+                <table class="w-full">
+
+                    <thead>
+
+                        <tr
+                            class="border-b
+                                   border-slate-200
+                                   text-left
+                                   text-sm
+                                   text-slate-500">
+
+                            <th class="py-3">
+                                Nomi
+                            </th>
+
+                            <th>
+                                IP
+                            </th>
+
+                            <th>
+                                MAC
+                            </th>
+
+                            <th>
+                                Holati
+                            </th>
+
+                            <th>
+                                Oxirgi ko‘rilgan
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        <tr
+                            v-for="device in latestDevices"
+                            :key="device.id"
+                            class="border-b
+                                   border-slate-100
+                                   hover:bg-slate-50">
+
+                            <td class="py-4 font-medium text-slate-800">
+
+                                {{ device.name || 'Unknown' }}
+
+                            </td>
+
+                            <td class="text-slate-600">
+
+                                {{ device.ip_address }}
+
+                            </td>
+
+                            <td class="text-slate-500 font-mono text-sm">
+
+                                {{ device.mac_address }}
+
+                            </td>
+
+                            <td>
+
+                                <span
+                                    v-if="device.status === 'ONLINE'"
+                                    class="inline-flex
+                                           items-center
+                                           px-3
+                                           py-1
+                                           rounded-full
+                                           text-xs
+                                           font-medium
+                                           bg-green-100
+                                           text-green-700">
+
+                                    🟢 Online
+
+                                </span>
+
+                                <span
+                                    v-else
+                                    class="inline-flex
+                                           items-center
+                                           px-3
+                                           py-1
+                                           rounded-full
+                                           text-xs
+                                           font-medium
+                                           bg-red-100
+                                           text-red-700">
+
+                                    🔴 Offline
+
+                                </span>
+
+                            </td>
+
+                            <td class="text-sm text-slate-500">
+
+                                {{ formatDate(device.last_seen_at) }}
+
+                            </td>
+
+                        </tr>
+
+
+                        <tr v-if="latestDevices.length === 0">
+
+                            <td
+                                colspan="5"
+                                class="text-center
+                                       py-10
+                                       text-slate-400">
+
+                                Hozircha qurilmalar mavjud emas.
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
 
             </div>
 
@@ -112,6 +368,7 @@
     </div>
 
 </template>
+
 
 <script setup>
 
@@ -123,13 +380,25 @@ import {
 
 import api from '../api/axios'
 
+import StatCard
+    from '../components/dashboard/StatCard.vue'
+
+import DashboardChart
+    from '../components/dashboard/DashboardChart.vue'
+
+
+const latestDevices = ref([])
+
 const stats = ref({})
 
-const logs = ref([])
+const loading = ref(false)
 
 let timer = null
 
+
 const loadData = async () => {
+
+    loading.value = true
 
     try {
 
@@ -139,57 +408,49 @@ const loadData = async () => {
         stats.value =
             res.data.stats
 
-        logs.value =
-            res.data.logs
+        latestDevices.value =
+            res.data.latestDevices
 
-    } catch (err) {
+    } catch (error) {
 
-        console.log(err)
+        console.error(
+            'Dashboard error:',
+            error
+        )
+
+    } finally {
+
+        loading.value = false
 
     }
 
 }
 
+
 const formatDate = (date) => {
 
-    if (!date)
+    if (!date) {
+
         return '-'
+
+    }
 
     return new Date(date).toLocaleString()
 
 }
 
-const eventName = (event) => {
-
-    const events = {
-
-        NEW_DEVICE: 'Yangi qurilma',
-
-        DEVICE_ONLINE: 'Online bo‘ldi',
-
-        DEVICE_OFFLINE: 'Offline bo‘ldi',
-
-        IP_CHANGED: 'IP o‘zgardi',
-
-        MAC_CHANGED: 'MAC o‘zgardi',
-
-    }
-
-    return events[event] || event
-
-}
 
 onMounted(() => {
 
     loadData()
 
-    timer =
-        setInterval(
-            loadData,
-            55000
-        )
+    timer = setInterval(
+        loadData,
+        60000
+    )
 
 })
+
 
 onUnmounted(() => {
 
