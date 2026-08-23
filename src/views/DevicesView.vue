@@ -480,40 +480,6 @@ const goDevice = (
     id
 ) => {
 
-    /*
-    |--------------------------------------------------------------
-    | Shu qurilmaning notificationini to'xtatamiz
-    |--------------------------------------------------------------
-    */
-
-    changedDevices.value = new Set(
-        changedDevices.value
-    )
-
-    changedDevices.value.delete(id)
-
-
-    /*
-    |--------------------------------------------------------------
-    | Agar aynan shu qurilma notification bergan bo'lsa
-    |--------------------------------------------------------------
-    */
-
-    if (
-        notificationDeviceId.value === id
-    ) {
-
-        audio.pause()
-
-        audio.currentTime = 0
-
-        notification.value.show = false
-
-        notificationDeviceId.value = null
-
-    }
-
-
     router.push(
         '/devices/' + id
     )
