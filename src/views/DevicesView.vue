@@ -47,8 +47,32 @@
 
         <!-- Notification -->
 
-        <Notification :show="notification.show" :title="notification.title" :message="notification.message"
-            @click="stopNotification" />
+        <div class="fixed top-5 right-5 w-96 z-50 space-y-3">
+
+            <div v-for="item in notifications" :key="item.id" @click="removeNotification(item.id)"
+                class="bg-white rounded-xl shadow-2xl border-l-4 border-blue-500 p-4 cursor-pointer hover:bg-blue-50 transition">
+
+                <div class="font-bold text-slate-800">
+
+                    {{ item.title }}
+
+                </div>
+
+                <div class="text-gray-600 mt-1">
+
+                    {{ item.message }}
+
+                </div>
+
+                <div class="text-xs text-gray-400 mt-2">
+
+                    Yopish uchun bosing
+
+                </div>
+
+            </div>
+
+        </div>
 
 
         <!-- Pagination -->
@@ -61,6 +85,8 @@
 
 
 <script setup>
+
+import api from '../api/axios'
 
 import {
     ref,
@@ -77,16 +103,11 @@ import {
     useRouter
 } from 'vue-router'
 
-import api from '../api/axios'
-
 import DeviceFilter
     from '../components/devices/DeviceFilter.vue'
 
 import DeviceTable
     from '../components/devices/DeviceTable.vue'
-
-import Notification
-    from '../components/common/Notification.vue'
 
 import Pagination
     from '../components/common/Pagination.vue'
@@ -134,15 +155,9 @@ let searchTimer = null
 |--------------------------------------------------------------------------
 */
 
-const notification = ref({
+const notifications = ref([])
 
-    show: false,
-
-    title: '',
-
-    message: ''
-
-})
+let notificationId = 0
 
 const changedDevices = ref(new Set())
 
@@ -260,27 +275,21 @@ const checkChanges = (
 
         const previous =
             oldDevices.find(
-                item =>
-                    item.id === device.id
+                item => item.id === device.id
             )
 
 
         /*
-        |----------------------------------------------------------
-        | Yangi qurilma
-        |----------------------------------------------------------
+        |--------------------------------------------------------------------------
+        | NEW DEVICE
+        |--------------------------------------------------------------------------
         */
 
         if (!previous) {
 
             notify(
-
-                device,
-
                 'Yangi qurilma',
-
                 `${device.name || 'Noma\'lum'} (${device.ip_address})`
-
             )
 
             return
@@ -288,9 +297,9 @@ const checkChanges = (
 
 
         /*
-        |----------------------------------------------------------
-        | Status o'zgardi
-        |----------------------------------------------------------
+        |--------------------------------------------------------------------------
+        | ONLINE / OFFLINE
+        |--------------------------------------------------------------------------
         */
 
         if (
@@ -303,25 +312,15 @@ const checkChanges = (
             ) {
 
                 notify(
-
-                    device,
-
-                    'Qurilma online',
-
+                    'Qurilma online bo‘ldi',
                     `${device.name || 'Noma\'lum'} (${device.ip_address})`
-
                 )
 
             } else {
 
                 notify(
-
-                    device,
-
-                    'Qurilma offline',
-
+                    'Qurilma offline bo‘ldi',
                     `${device.name || 'Noma\'lum'} (${device.ip_address})`
-
                 )
 
             }
@@ -330,9 +329,9 @@ const checkChanges = (
 
 
         /*
-        |----------------------------------------------------------
-        | IP o'zgardi
-        |----------------------------------------------------------
+        |--------------------------------------------------------------------------
+        | IP CHANGED
+        |--------------------------------------------------------------------------
         */
 
         if (
@@ -341,14 +340,68 @@ const checkChanges = (
         ) {
 
             notify(
-
-                device,
-
-                'IP o‘zgardi',
-
+                'IP manzil o‘zgardi',
                 `${device.name || 'Noma\'lum'}: ${previous.ip_address} → ${device.ip_address}`
-
             )
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | MAC CHANGED
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            previous.mac_address !==
+            device.mac_address
+        ) {
+
+            notify(
+                'MAC manzil o‘zgardi',
+                `${device.name || 'Noma\'lum'}: ${previous.mac_address} → ${device.mac_address}`
+            )
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | LATEST LOG CHANGED
+        |--------------------------------------------------------------------------
+        */
+
+        if (
+            previous.latest_log?.id !==
+            device.latest_log?.id
+        ) {
+
+            const event =
+                device.latest_log?.event_type
+
+            /*
+            | Agar yuqoridagi status/IP/MAC
+            | notification allaqachon chiqargan bo‘lsa,
+            | yana ikkinchi marta notification bermaymiz.
+            */
+
+            if (
+                event &&
+                event !== 'DEVICE_ONLINE' &&
+                event !== 'DEVICE_OFFLINE' &&
+                event !== 'IP_CHANGED' &&
+                event !== 'MAC_CHANGED' &&
+                event !== 'NEW_DEVICE'
+            ) {
+
+                notify(
+                    eventName(event),
+                    device.latest_log?.message ||
+                    `${device.name || 'Noma\'lum'} hodisa`
+                )
+
+            }
 
         }
 
@@ -388,7 +441,30 @@ const changePage = (
 
 }
 
+const eventName = (
+    event
+) => {
 
+    return {
+
+        NEW_DEVICE:
+            'Yangi qurilma',
+
+        DEVICE_ONLINE:
+            'Qurilma online bo‘ldi',
+
+        DEVICE_OFFLINE:
+            'Qurilma offline bo‘ldi',
+
+        IP_CHANGED:
+            'IP manzil o‘zgardi',
+
+        MAC_CHANGED:
+            'MAC manzil o‘zgardi'
+
+    }[event] || event
+
+}
 /*
 |--------------------------------------------------------------------------
 | Open device
@@ -446,85 +522,64 @@ const goDevice = (
 |--------------------------------------------------------------------------
 */
 const notify = (
-    device,
     title,
     message
 ) => {
 
-    /*
-    |--------------------------------------------------------------
-    | Qurilmani o'zgargan qurilmalar ro'yxatiga qo'shamiz
-    |--------------------------------------------------------------
-    */
+    const id = ++notificationId
 
-    changedDevices.value = new Set(
-        changedDevices.value
-    )
+    notifications.value.push({
 
-    changedDevices.value.add(
-        device.id
-    )
-
-
-    /*
-    |--------------------------------------------------------------
-    | Notification
-    |--------------------------------------------------------------
-    */
-
-    notification.value = {
-
-        show: true,
+        id,
 
         title,
 
         message
 
-    }
-
-
-    notificationDeviceId.value =
-        device.id
+    })
 
 
     /*
-    |--------------------------------------------------------------
-    | Sound faqat setting true bo'lsa
-    |--------------------------------------------------------------
+    |--------------------------------------------------------------------------
+    | Sound
+    |--------------------------------------------------------------------------
     */
 
-    if (
-        settings.value.notification_sound
-    ) {
+    if (settings.value.notification_sound) {
 
         audio.currentTime = 0
 
         audio
             .play()
-            .catch(() => {
-
-                /*
-                Browser autoplay bloklashi mumkin.
-                Birinchi user interactiondan keyin ishlaydi.
-                */
-
-            })
+            .catch(() => { })
 
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Auto remove
+    |--------------------------------------------------------------------------
+    */
+
+    setTimeout(() => {
+
+        removeNotification(id)
+
+    }, 10000)
+
 }
 
-const stopNotificationSound = () => {
+const removeNotification = (
+    id
+) => {
 
-    audio.pause()
-
-    audio.currentTime = 0
-
-    audio.loop = false
+    notifications.value =
+        notifications.value.filter(
+            item => item.id !== id
+        )
 
 }
-
-
 /*
 |--------------------------------------------------------------------------
 | Search
@@ -572,12 +627,6 @@ clearInterval(timer)
 timer = null
 
 
-/*
-|--------------------------------------------------------------
-| auto_refresh OFF
-|--------------------------------------------------------------
-*/
-
 if (
     !settings.value.auto_refresh
 ) {
@@ -587,15 +636,11 @@ if (
 }
 
 
-/*
-|--------------------------------------------------------------
-| scan_interval sekundda
-|--------------------------------------------------------------
-*/
-
 const interval =
     Math.max(
-        Number(settings.value.scan_interval || 60),
+        Number(
+            settings.value.scan_interval || 60
+        ),
         1
     ) * 1000
 
@@ -603,11 +648,8 @@ const interval =
 timer = setInterval(() => {
 
     loadDevices(
-
         pagination.value.current_page || 1,
-
         true
-
     )
 
 }, interval)
@@ -616,31 +658,46 @@ timer = setInterval(() => {
 
 const handleSettingsUpdated = async () => {
 
-loadFromStorage()
+    loadFromStorage()
 
-await loadSettings()
+    await loadSettings()
 
-startAutoRefresh()
+    startAutoRefresh()
 
 }
 
 onMounted(async () => {
 
-loadFromStorage()
+    /*
+    |--------------------------------------------------------------------------
+    | Settingsni olish
+    |--------------------------------------------------------------------------
+    */
 
-await loadSettings()
+    loadFromStorage()
 
-await loadDevices(
-    1,
-    false
-)
+    await loadSettings()
 
-startAutoRefresh()
 
-window.addEventListener(
-    'app-settings-updated',
-    handleSettingsUpdated
-)
+    /*
+    |--------------------------------------------------------------------------
+    | Birinchi load
+    |--------------------------------------------------------------------------
+    */
+
+    await loadDevices(
+        1,
+        false
+    )
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Auto refresh
+    |--------------------------------------------------------------------------
+    */
+
+    startAutoRefresh()
 
 })
 
@@ -656,10 +713,6 @@ onUnmounted(() => {
 clearInterval(timer)
 
 clearTimeout(searchTimer)
-
-audio.pause()
-
-audio.currentTime = 0
 
 window.removeEventListener(
     'app-settings-updated',
