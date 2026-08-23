@@ -43,7 +43,7 @@ const {
     settings,
     loadSettings,
     loadFromStorage
-} = useAppSettings()
+} = useSettings()
 
 let timer = null
 
