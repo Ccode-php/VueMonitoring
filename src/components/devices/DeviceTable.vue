@@ -35,11 +35,16 @@
 
             <tbody>
 
-                <tr v-for="device in devices" :key="device.id" @click="$emit('select', device.id)" class="border-b border-slate-200
-           hover:bg-blue-50 transition duration-200 cursor-pointer" :class="{
-            'bg-yellow-100 animate-pulse':
-                props.changedDevices.has(device.id)
-        }">
+                <tr v-for="device in devices" :key="device.id" @click="$emit('select', device.id)" :class="[
+                    'border-b border-slate-200',
+                    'hover:bg-blue-50',
+                    'transition duration-200',
+                    'cursor-pointer',
+
+                    changedDevices[device.id]
+                        ? 'bg-yellow-50 ring-2 ring-yellow-300'
+                        : ''
+                ]">
 
                     <td class="px-5 py-4">
 
@@ -89,19 +94,41 @@
 
                         <div v-if="device.latest_log">
 
-                            <div class="text-slate-700">
+                            <div class="flex items-center gap-2">
 
-                                {{
-                                    eventName(
-                                        device.latest_log.event_type
-                                    )
-                                }}
+                                <span v-if="changedDevices[device.id]" class="inline-flex
+                   items-center
+                   justify-center
+                   w-6 h-6
+                   rounded-full
+                   bg-yellow-400
+                   text-white
+                   text-xs
+                   font-bold">
+
+                                    !
+
+                                </span>
+
+                                <span class="font-semibold" :class="changedDevices[device.id]
+                                    ? 'text-yellow-700'
+                                    : 'text-slate-700'
+                                    ">
+
+                                    {{
+                                        eventName(
+                                            device.latest_log.event_type
+                                        )
+                                    }}
+
+                                </span>
 
                             </div>
 
+
                             <div class="text-xs
-                                       text-slate-500
-                                       mt-1">
+               text-slate-500
+               mt-1">
 
                                 {{
                                     device.latest_log.message
@@ -109,7 +136,40 @@
 
                             </div>
 
+
+                            <div v-if="
+                                device.latest_log.old_ip ||
+                                device.latest_log.new_ip
+                            " class="text-xs text-blue-600 mt-1">
+
+                                IP:
+
+                                {{ device.latest_log.old_ip || '-' }}
+
+                                →
+
+                                {{ device.latest_log.new_ip || '-' }}
+
+                            </div>
+
+
+                            <div v-if="
+                                device.latest_log.old_mac ||
+                                device.latest_log.new_mac
+                            " class="text-xs text-purple-600 mt-1">
+
+                                MAC:
+
+                                {{ device.latest_log.old_mac || '-' }}
+
+                                →
+
+                                {{ device.latest_log.new_mac || '-' }}
+
+                            </div>
+
                         </div>
+
 
                         <div v-else class="text-slate-400">
 
@@ -159,9 +219,9 @@ const props = defineProps({
 
     changedDevices: {
 
-        type: Set,
+        type: Object,
 
-        default: () => new Set()
+        default: () => ({})
 
     }
 

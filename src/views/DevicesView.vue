@@ -159,7 +159,7 @@ const notifications = ref([])
 
 let notificationId = 0
 
-const changedDevices = ref(new Set())
+const changedDevices = ref({})
 
 const notificationDeviceId = ref(null)
 
@@ -289,7 +289,8 @@ const checkChanges = (
 
             notify(
                 'Yangi qurilma',
-                `${device.name || 'Noma\'lum'} (${device.ip_address})`
+                `${device.name || 'Noma\'lum'} (${device.ip_address})`,
+                device
             )
 
             return
@@ -313,14 +314,16 @@ const checkChanges = (
 
                 notify(
                     'Qurilma online bo‘ldi',
-                    `${device.name || 'Noma\'lum'} (${device.ip_address})`
+                    `${device.name || 'Noma\'lum'} (${device.ip_address})`,
+                    device
                 )
 
             } else {
 
                 notify(
                     'Qurilma offline bo‘ldi',
-                    `${device.name || 'Noma\'lum'} (${device.ip_address})`
+                    `${device.name || 'Noma\'lum'} (${device.ip_address})`,
+                    device
                 )
 
             }
@@ -341,7 +344,8 @@ const checkChanges = (
 
             notify(
                 'IP manzil o‘zgardi',
-                `${device.name || 'Noma\'lum'}: ${previous.ip_address} → ${device.ip_address}`
+                `${device.name || 'Noma\'lum'}: ${previous.ip_address} → ${device.ip_address}`,
+                device
             )
 
         }
@@ -360,7 +364,8 @@ const checkChanges = (
 
             notify(
                 'MAC manzil o‘zgardi',
-                `${device.name || 'Noma\'lum'}: ${previous.mac_address} → ${device.mac_address}`
+                `${device.name || 'Noma\'lum'}: ${previous.mac_address} → ${device.mac_address}`,
+                device
             )
 
         }
@@ -523,7 +528,8 @@ const goDevice = (
 */
 const notify = (
     title,
-    message
+    message,
+    device = null
 ) => {
 
     const id = ++notificationId
@@ -541,11 +547,38 @@ const notify = (
 
     /*
     |--------------------------------------------------------------------------
-    | Sound
+    | Device jadvalida highlight
     |--------------------------------------------------------------------------
     */
 
-    if (settings.value.notification_sound) {
+    if (device) {
+
+        changedDevices.value = {
+
+            ...changedDevices.value,
+
+            [device.id]: {
+
+                title,
+
+                event: device.latest_log?.event_type || null
+
+            }
+
+        }
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notification sound
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        settings.value.notification_sound
+    ) {
 
         audio.currentTime = 0
 
@@ -558,7 +591,7 @@ const notify = (
 
     /*
     |--------------------------------------------------------------------------
-    | Auto remove
+    | Tepadan notificationni avtomatik o‘chirish
     |--------------------------------------------------------------------------
     */
 
@@ -622,37 +655,37 @@ watch(
 
 const startAutoRefresh = () => {
 
-clearInterval(timer)
+    clearInterval(timer)
 
-timer = null
-
-
-if (
-    !settings.value.auto_refresh
-) {
-
-    return
-
-}
+    timer = null
 
 
-const interval =
-    Math.max(
-        Number(
-            settings.value.scan_interval || 60
-        ),
-        1
-    ) * 1000
+    if (
+        !settings.value.auto_refresh
+    ) {
+
+        return
+
+    }
 
 
-timer = setInterval(() => {
+    const interval =
+        Math.max(
+            Number(
+                settings.value.scan_interval || 60
+            ),
+            1
+        ) * 1000
 
-    loadDevices(
-        pagination.value.current_page || 1,
-        true
-    )
 
-}, interval)
+    timer = setInterval(() => {
+
+        loadDevices(
+            pagination.value.current_page || 1,
+            true
+        )
+
+    }, interval)
 
 }
 
@@ -710,14 +743,14 @@ onMounted(async () => {
 
 onUnmounted(() => {
 
-clearInterval(timer)
+    clearInterval(timer)
 
-clearTimeout(searchTimer)
+    clearTimeout(searchTimer)
 
-window.removeEventListener(
-    'app-settings-updated',
-    handleSettingsUpdated
-)
+    window.removeEventListener(
+        'app-settings-updated',
+        handleSettingsUpdated
+    )
 
 })
 
