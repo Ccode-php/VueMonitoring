@@ -18,10 +18,20 @@
 
 <script setup>
 
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
 
 import api from '../api/axios'
+
+import {
+    ref,
+    onMounted,
+    onUnmounted
+} from 'vue'
+
+import {
+    useSettings
+} from '../composables/useSettings'
+
+import { useRoute } from 'vue-router'
 
 import DeviceInfoCard from '../components/devices/DeviceInfoCard.vue'
 import DeviceTimeline from '../components/devices/DeviceTimeline.vue'
@@ -29,6 +39,13 @@ import DeviceTimeline from '../components/devices/DeviceTimeline.vue'
 const route = useRoute()
 
 const device = ref(null)
+const {
+    settings,
+    loadSettings,
+    loadFromStorage
+} = useAppSettings()
+
+let timer = null
 
 const loadDevice = async () => {
 
@@ -72,6 +89,49 @@ const saveDevice = async () => {
 
 }
 
-onMounted(loadDevice)
+const startAutoRefresh = () => {
+
+clearInterval(timer)
+
+timer = null
+
+if (
+    !settings.value.auto_refresh
+) {
+
+    return
+
+}
+
+const interval =
+    Math.max(
+        Number(settings.value.scan_interval || 60),
+        1
+    ) * 1000
+
+timer = setInterval(
+    loadDevice,
+    interval
+)
+
+}
+
+onMounted(async () => {
+
+loadFromStorage()
+
+await loadSettings()
+
+await loadDevice()
+
+startAutoRefresh()
+
+})
+
+onUnmounted(() => {
+
+clearInterval(timer)
+
+})
 
 </script>

@@ -378,6 +378,10 @@ import {
     onUnmounted
 } from 'vue'
 
+import {
+    useSettings
+} from '../composables/useSettings'
+
 import api from '../api/axios'
 
 import StatCard
@@ -394,6 +398,12 @@ const stats = ref({})
 const loading = ref(false)
 
 let timer = null
+
+const {
+    settings,
+    loadSettings,
+    loadFromStorage
+} = useSettings()
 
 
 const loadData = async () => {
@@ -439,22 +449,69 @@ const formatDate = (date) => {
 
 }
 
+const startAutoRefresh = () => {
 
-onMounted(() => {
+clearInterval(timer)
 
-    loadData()
+timer = null
 
-    timer = setInterval(
-        loadData,
-        60000
-    )
+if (
+    !settings.value.auto_refresh
+) {
+
+    return
+
+}
+
+const interval =
+    Math.max(
+        Number(settings.value.scan_interval || 60),
+        1
+    ) * 1000
+
+timer = setInterval(
+    loadData,
+    interval
+)
+
+}
+
+const handleSettingsUpdated = async () => {
+
+loadFromStorage()
+
+await loadSettings()
+
+startAutoRefresh()
+
+}
+
+onMounted(async () => {
+
+loadFromStorage()
+
+await loadSettings()
+
+await loadData()
+
+startAutoRefresh()
+
+window.addEventListener(
+    'app-settings-updated',
+    handleSettingsUpdated
+)
 
 })
 
 
 onUnmounted(() => {
 
-    clearInterval(timer)
+clearInterval(timer)
+
+window.removeEventListener(
+    'app-settings-updated',
+    handleSettingsUpdated
+)
 
 })
 

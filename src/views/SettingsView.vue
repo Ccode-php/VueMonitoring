@@ -236,7 +236,6 @@ const saving = ref(false)
 
 const success = ref(false)
 
-
 const load = async () => {
 
     loading.value = true
@@ -300,37 +299,58 @@ const load = async () => {
 
 const save = async () => {
 
-    saving.value = true
+saving.value = true
 
-    success.value = false
+success.value = false
 
-    try {
+try {
 
-        await api.post(
-            '/settings',
-            form.value
-        )
+    await api.post(
+        '/settings',
+        form.value
+    )
 
-        success.value = true
+    /*
+    |----------------------------------------------------------
+    | Vue sahifalariga yangi settingni yetkazamiz
+    |----------------------------------------------------------
+    */
 
-        setTimeout(() => {
+    localStorage.setItem(
+        'app_settings',
+        JSON.stringify(form.value)
+    )
 
-            success.value = false
+    /*
+    |----------------------------------------------------------
+    | Boshqa tab/window bo‘lsa ham xabar beramiz
+    |----------------------------------------------------------
+    */
 
-        }, 3000)
+    window.dispatchEvent(
+        new Event('app-settings-updated')
+    )
 
-    } catch (error) {
+    success.value = true
 
-        console.error(
-            'Settings save error:',
-            error
-        )
+    setTimeout(() => {
 
-    } finally {
+        success.value = false
 
-        saving.value = false
+    }, 3000)
 
-    }
+} catch (error) {
+
+    console.error(
+        'Settings save error:',
+        error
+    )
+
+} finally {
+
+    saving.value = false
+
+}
 
 }
 

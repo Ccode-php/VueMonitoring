@@ -14,6 +14,7 @@
 
 <script setup>
 
-import NetworkTopology from '../components/NetworkTopology.vue'
+import NetworkTopology
+    from '../components/NetworkTopology.vue'
 
 </script>

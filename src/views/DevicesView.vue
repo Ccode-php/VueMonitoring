@@ -37,34 +37,23 @@
 
         <!-- Search -->
 
-        <DeviceFilter
-            v-model:search="search"
-        />
+        <DeviceFilter v-model:search="search" />
 
 
         <!-- Table -->
 
-        <DeviceTable
-            :devices="devices"
-            @select="goDevice"
-        />
+        <DeviceTable :devices="devices" :changed-devices="changedDevices" @select="goDevice" />
 
 
         <!-- Notification -->
 
-        <Notification
-            :show="notification.show"
-            :title="notification.title"
-            :message="notification.message"
-        />
+        <Notification :show="notification.show" :title="notification.title" :message="notification.message"
+            @click="stopNotification" />
 
 
         <!-- Pagination -->
 
-        <Pagination
-            :pagination="pagination"
-            @change="changePage"
-        />
+        <Pagination :pagination="pagination" @change="changePage" />
 
     </div>
 
@@ -79,6 +68,10 @@ import {
     onUnmounted,
     watch
 } from 'vue'
+
+import {
+    useSettings
+} from '../composables/useSettings'
 
 import {
     useRouter
@@ -114,6 +107,12 @@ const router = useRouter()
 |--------------------------------------------------------------------------
 */
 
+const {
+    settings,
+    loadSettings,
+    loadFromStorage
+} = useSettings()
+
 const devices = ref([])
 
 const pagination = ref({})
@@ -145,10 +144,15 @@ const notification = ref({
 
 })
 
+const changedDevices = ref(new Set())
+
+const notificationDeviceId = ref(null)
 
 const audio = new Audio('/notification.mp3')
 
+audio.loop = true
 
+const pendingNotifications = ref([])
 /*
 |--------------------------------------------------------------------------
 | Load devices
@@ -262,12 +266,16 @@ const checkChanges = (
 
 
         /*
-        | New device
+        |----------------------------------------------------------
+        | Yangi qurilma
+        |----------------------------------------------------------
         */
 
         if (!previous) {
 
             notify(
+
+                device,
 
                 'Yangi qurilma',
 
@@ -280,7 +288,9 @@ const checkChanges = (
 
 
         /*
-        | Status changed
+        |----------------------------------------------------------
+        | Status o'zgardi
+        |----------------------------------------------------------
         */
 
         if (
@@ -294,6 +304,8 @@ const checkChanges = (
 
                 notify(
 
+                    device,
+
                     'Qurilma online',
 
                     `${device.name || 'Noma\'lum'} (${device.ip_address})`
@@ -304,6 +316,8 @@ const checkChanges = (
 
                 notify(
 
+                    device,
+
                     'Qurilma offline',
 
                     `${device.name || 'Noma\'lum'} (${device.ip_address})`
@@ -311,6 +325,30 @@ const checkChanges = (
                 )
 
             }
+
+        }
+
+
+        /*
+        |----------------------------------------------------------
+        | IP o'zgardi
+        |----------------------------------------------------------
+        */
+
+        if (
+            previous.ip_address !==
+            device.ip_address
+        ) {
+
+            notify(
+
+                device,
+
+                'IP o‘zgardi',
+
+                `${device.name || 'Noma\'lum'}: ${previous.ip_address} → ${device.ip_address}`
+
+            )
 
         }
 
@@ -361,6 +399,40 @@ const goDevice = (
     id
 ) => {
 
+    /*
+    |--------------------------------------------------------------
+    | Shu qurilmaning notificationini to'xtatamiz
+    |--------------------------------------------------------------
+    */
+
+    changedDevices.value = new Set(
+        changedDevices.value
+    )
+
+    changedDevices.value.delete(id)
+
+
+    /*
+    |--------------------------------------------------------------
+    | Agar aynan shu qurilma notification bergan bo'lsa
+    |--------------------------------------------------------------
+    */
+
+    if (
+        notificationDeviceId.value === id
+    ) {
+
+        audio.pause()
+
+        audio.currentTime = 0
+
+        notification.value.show = false
+
+        notificationDeviceId.value = null
+
+    }
+
+
     router.push(
         '/devices/' + id
     )
@@ -373,11 +445,32 @@ const goDevice = (
 | Notification
 |--------------------------------------------------------------------------
 */
-
 const notify = (
+    device,
     title,
     message
 ) => {
+
+    /*
+    |--------------------------------------------------------------
+    | Qurilmani o'zgargan qurilmalar ro'yxatiga qo'shamiz
+    |--------------------------------------------------------------
+    */
+
+    changedDevices.value = new Set(
+        changedDevices.value
+    )
+
+    changedDevices.value.add(
+        device.id
+    )
+
+
+    /*
+    |--------------------------------------------------------------
+    | Notification
+    |--------------------------------------------------------------
+    */
 
     notification.value = {
 
@@ -390,16 +483,44 @@ const notify = (
     }
 
 
-    audio
-        .play()
-        .catch(() => {})
+    notificationDeviceId.value =
+        device.id
 
 
-    setTimeout(() => {
+    /*
+    |--------------------------------------------------------------
+    | Sound faqat setting true bo'lsa
+    |--------------------------------------------------------------
+    */
 
-        notification.value.show = false
+    if (
+        settings.value.notification_sound
+    ) {
 
-    }, 4000)
+        audio.currentTime = 0
+
+        audio
+            .play()
+            .catch(() => {
+
+                /*
+                Browser autoplay bloklashi mumkin.
+                Birinchi user interactiondan keyin ishlaydi.
+                */
+
+            })
+
+    }
+
+}
+
+const stopNotificationSound = () => {
+
+    audio.pause()
+
+    audio.currentTime = 0
+
+    audio.loop = false
 
 }
 
@@ -444,25 +565,82 @@ watch(
 |--------------------------------------------------------------------------
 */
 
-onMounted(() => {
+const startAutoRefresh = () => {
+
+clearInterval(timer)
+
+timer = null
+
+
+/*
+|--------------------------------------------------------------
+| auto_refresh OFF
+|--------------------------------------------------------------
+*/
+
+if (
+    !settings.value.auto_refresh
+) {
+
+    return
+
+}
+
+
+/*
+|--------------------------------------------------------------
+| scan_interval sekundda
+|--------------------------------------------------------------
+*/
+
+const interval =
+    Math.max(
+        Number(settings.value.scan_interval || 60),
+        1
+    ) * 1000
+
+
+timer = setInterval(() => {
 
     loadDevices(
-        1,
-        false
+
+        pagination.value.current_page || 1,
+
+        true
+
     )
 
+}, interval)
 
-    timer = setInterval(() => {
+}
 
-        loadDevices(
+const handleSettingsUpdated = async () => {
 
-            pagination.value.current_page || 1,
+loadFromStorage()
 
-            true
+await loadSettings()
 
-        )
+startAutoRefresh()
 
-    }, 60000)
+}
+
+onMounted(async () => {
+
+loadFromStorage()
+
+await loadSettings()
+
+await loadDevices(
+    1,
+    false
+)
+
+startAutoRefresh()
+
+window.addEventListener(
+    'app-settings-updated',
+    handleSettingsUpdated
+)
 
 })
 
@@ -475,9 +653,18 @@ onMounted(() => {
 
 onUnmounted(() => {
 
-    clearInterval(timer)
+clearInterval(timer)
 
-    clearTimeout(searchTimer)
+clearTimeout(searchTimer)
+
+audio.pause()
+
+audio.currentTime = 0
+
+window.removeEventListener(
+    'app-settings-updated',
+    handleSettingsUpdated
+)
 
 })
 

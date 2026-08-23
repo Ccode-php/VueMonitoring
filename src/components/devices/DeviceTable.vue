@@ -4,9 +4,7 @@
 
         <table class="w-full">
 
-            <thead
-                class="bg-slate-300 sticky top-0 z-10 shadow-sm"
-            >
+            <thead class="bg-slate-300 sticky top-0 z-10 shadow-sm">
 
                 <tr class="text-slate-900 text-sm uppercase">
 
@@ -37,16 +35,11 @@
 
             <tbody>
 
-                <tr
-                    v-for="device in devices"
-                    :key="device.id"
-                    @click="$emit('select', device.id)"
-                    class="border-b border-slate-200
-                           hover:bg-blue-50
-                           transition
-                           duration-200
-                           cursor-pointer"
-                >
+                <tr v-for="device in devices" :key="device.id" @click="$emit('select', device.id)" class="border-b border-slate-200
+           hover:bg-blue-50 transition duration-200 cursor-pointer" :class="{
+            'bg-yellow-100 animate-pulse':
+                props.changedDevices.has(device.id)
+        }">
 
                     <td class="px-5 py-4">
 
@@ -85,9 +78,7 @@
 
                         <div class="flex justify-center">
 
-                            <StatusBadge
-                                :status="device.status"
-                            />
+                            <StatusBadge :status="device.status" />
 
                         </div>
 
@@ -108,11 +99,9 @@
 
                             </div>
 
-                            <div
-                                class="text-xs
+                            <div class="text-xs
                                        text-slate-500
-                                       mt-1"
-                            >
+                                       mt-1">
 
                                 {{
                                     device.latest_log.message
@@ -122,10 +111,7 @@
 
                         </div>
 
-                        <div
-                            v-else
-                            class="text-slate-400"
-                        >
+                        <div v-else class="text-slate-400">
 
                             Hodisa yo'q
 
@@ -138,10 +124,7 @@
 
                 <tr v-if="devices.length === 0">
 
-                    <td
-                        colspan="5"
-                        class="py-12 text-center text-gray-500"
-                    >
+                    <td colspan="5" class="py-12 text-center text-gray-500">
 
                         Qurilmalar topilmadi.
 
@@ -164,13 +147,21 @@ import StatusBadge
     from './StatusBadge.vue'
 
 
-defineProps({
+const props = defineProps({
 
     devices: {
 
         type: Array,
 
         default: () => []
+
+    },
+
+    changedDevices: {
+
+        type: Set,
+
+        default: () => new Set()
 
     }
 

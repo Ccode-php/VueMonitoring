@@ -2,9 +2,8 @@
 
     <Transition name="slide">
 
-        <div
-            v-if="show"
-            class="fixed top-5 right-5 w-80 bg-white rounded-xl shadow-2xl border-l-4 border-blue-500 p-4 z-50">
+        <div v-if="show" @click="$emit('click')"
+            class="fixed top-5 right-5 w-80 bg-white rounded-xl shadow-2xl border-l-4 border-blue-500 p-4 z-50 cursor-pointer">
 
             <div class="font-bold">
 
@@ -36,31 +35,35 @@ defineProps({
 
 })
 
+defineEmits([
+
+    'click'
+
+])
+
 </script>
 
 <style scoped>
-
 .slide-enter-active,
-.slide-leave-active{
+.slide-leave-active {
 
-    transition:.3s;
-
-}
-
-.slide-enter-from{
-
-    opacity:0;
-
-    transform:translateX(100%);
+    transition: .3s;
 
 }
 
-.slide-leave-to{
+.slide-enter-from {
 
-    opacity:0;
+    opacity: 0;
 
-    transform:translateX(100%);
+    transform: translateX(100%);
 
 }
 
+.slide-leave-to {
+
+    opacity: 0;
+
+    transform: translateX(100%);
+
+}
 </style>
