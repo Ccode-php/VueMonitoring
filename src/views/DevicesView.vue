@@ -161,23 +161,78 @@ let notificationId = 0
 
 const changedDevices = ref({})
 
-const notificationDeviceId = ref(null)
-
 const audio = new Audio('/notification.mp3')
 
-const playNotificationSound = () => {
+audio.loop = true
+audio.preload = 'auto'
+let audioUnlocked = false
 
-    audio.currentTime = 0
+const unlockAudio = async () => {
 
-    audio
-        .play()
-        .catch(() => { })
+    if (audioUnlocked) {
+
+        return
+
+    }
+
+    try {
+
+        audio.muted = true
+
+        await audio.play()
+
+        audio.pause()
+
+        audio.currentTime = 0
+
+        audio.muted = false
+
+        audioUnlocked = true
+
+    } catch (error) {
+
+        console.warn(
+            'Audio unlock failed:',
+            error
+        )
+
+    }
 
 }
 
-audio.loop = true
+const playNotificationSound = async () => {
 
-const pendingNotifications = ref([])
+    if (!settings.value.notification_sound) {
+
+        return
+
+    }
+
+    try {
+
+        audio.currentTime = 0
+
+        await audio.play()
+
+    } catch (error) {
+
+        console.warn(
+            'Notification sound blocked:',
+            error
+        )
+
+    }
+
+}
+
+
+const stopNotificationSound = () => {
+
+    audio.pause()
+
+    audio.currentTime = 0
+
+}
 /*
 |--------------------------------------------------------------------------
 | Load devices
@@ -390,9 +445,36 @@ const addDeviceNotification = (
     eventType
 ) => {
 
+    const notification = {
+
+        id: ++notificationId,
+
+        deviceId: device.id,
+
+        title,
+
+        eventType,
+
+        message:
+            `${device.name || 'Noma\'lum qurilma'} (${device.ip_address})`
+
+    }
+
+
     /*
     |--------------------------------------------------------------------------
-    | Shu qurilma notification olgan deb belgilaymiz
+    | Notification ro'yxatiga qo'shamiz
+    |--------------------------------------------------------------------------
+    */
+
+    notifications.value.push(
+        notification
+    )
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shu qurilmani tableda belgilaymiz
     |--------------------------------------------------------------------------
     */
 
@@ -416,24 +498,6 @@ const addDeviceNotification = (
                 device.ip_address
 
         }
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Notification oynasi
-    |--------------------------------------------------------------------------
-    */
-
-    notification.value = {
-
-        show: true,
-
-        title,
-
-        message:
-            `${device.name || 'Noma\'lum qurilma'} (${device.ip_address})`
 
     }
 
@@ -510,34 +574,133 @@ const eventName = (
 |--------------------------------------------------------------------------
 */
 
-const goDevice = (
-    id
+const removeNotification = (
+    notificationId
 ) => {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Faqat bosilgan qurilmaning notificationini o'chiramiz
-    |--------------------------------------------------------------------------
-    */
+    const item =
+        notifications.value.find(
+            notification =>
+                notification.id === notificationId
+        )
 
-    if (
-        changedDevices.value[id]
-    ) {
+    if (!item) {
 
-        const updated = {
-            ...changedDevices.value
-        }
-
-        delete updated[id]
-
-        changedDevices.value = updated
+        return
 
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | Device detail sahifasiga o'tamiz
+    | Faqat bosilgan notificationni o'chiramiz
+    |--------------------------------------------------------------------------
+    */
+
+    notifications.value =
+        notifications.value.filter(
+            notification =>
+                notification.id !== notificationId
+        )
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Agar shu qurilmaning boshqa notificationi qolmagan bo'lsa,
+    | tabledagi sariq belgi ham o'chadi
+    |--------------------------------------------------------------------------
+    */
+
+    const hasAnother =
+        notifications.value.some(
+            notification =>
+                notification.deviceId ===
+                item.deviceId
+        )
+
+
+    if (!hasAnother) {
+
+        const updated = {
+            ...changedDevices.value
+        }
+
+        delete updated[item.deviceId]
+
+        changedDevices.value =
+            updated
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Agar notification qolmagan bo'lsa ovozni to'xtatamiz
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        notifications.value.length === 0
+    ) {
+
+        stopNotificationSound()
+
+    }
+
+}
+
+const goDevice = (
+    id
+) => {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Faqat shu qurilmaga tegishli notificationlarni o'chiramiz
+    |--------------------------------------------------------------------------
+    */
+
+    notifications.value =
+        notifications.value.filter(
+            notification =>
+                notification.deviceId !== id
+        )
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tabledagi shu qurilmaning sariq belgisi o'chadi
+    |--------------------------------------------------------------------------
+    */
+
+    const updated = {
+        ...changedDevices.value
+    }
+
+    delete updated[id]
+
+    changedDevices.value =
+        updated
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Agar boshqa notification qolmagan bo'lsa,
+    | ovozni to'xtatamiz
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        notifications.value.length === 0
+    ) {
+
+        stopNotificationSound()
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Device detail
     |--------------------------------------------------------------------------
     */
 
@@ -643,36 +806,33 @@ const handleSettingsUpdated = async () => {
 
 onMounted(async () => {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Settingsni olish
-    |--------------------------------------------------------------------------
-    */
+loadFromStorage()
 
-    loadFromStorage()
-
-    await loadSettings()
+await loadSettings()
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Birinchi load
-    |--------------------------------------------------------------------------
-    */
-
-    await loadDevices(
-        1,
-        false
-    )
+document.addEventListener(
+    'click',
+    unlockAudio,
+    {
+        once: true
+    }
+)
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Auto refresh
-    |--------------------------------------------------------------------------
-    */
+window.addEventListener(
+    'app-settings-updated',
+    handleSettingsUpdated
+)
 
-    startAutoRefresh()
+
+await loadDevices(
+    1,
+    false
+)
+
+
+startAutoRefresh()
 
 })
 
@@ -685,14 +845,16 @@ onMounted(async () => {
 
 onUnmounted(() => {
 
-    clearInterval(timer)
+clearInterval(timer)
 
-    clearTimeout(searchTimer)
+clearTimeout(searchTimer)
 
-    window.removeEventListener(
-        'app-settings-updated',
-        handleSettingsUpdated
-    )
+stopNotificationSound()
+
+document.removeEventListener(
+    'click',
+    unlockAudio
+)
 
 })
 
