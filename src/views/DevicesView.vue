@@ -47,32 +47,7 @@
 
         <!-- Notification -->
 
-        <div class="fixed top-5 right-5 w-96 z-50 space-y-3">
-
-            <div v-for="item in notifications" :key="item.id" @click="removeNotification(item.id)"
-                class="bg-white rounded-xl shadow-2xl border-l-4 border-blue-500 p-4 cursor-pointer hover:bg-blue-50 transition">
-
-                <div class="font-bold text-slate-800">
-
-                    {{ item.title }}
-
-                </div>
-
-                <div class="text-gray-600 mt-1">
-
-                    {{ item.message }}
-
-                </div>
-
-                <div class="text-xs text-gray-400 mt-2">
-
-                    Yopish uchun bosing
-
-                </div>
-
-            </div>
-
-        </div>
+        <Notification :show="notification.show" :title="notification.title" :message="notification.message" />
 
 
         <!-- Pagination -->
@@ -164,6 +139,16 @@ const changedDevices = ref({})
 const notificationDeviceId = ref(null)
 
 const audio = new Audio('/notification.mp3')
+
+const playNotificationSound = () => {
+
+    audio.currentTime = 0
+
+    audio
+        .play()
+        .catch(() => { })
+
+}
 
 audio.loop = true
 
@@ -275,22 +260,22 @@ const checkChanges = (
 
         const previous =
             oldDevices.find(
-                item => item.id === device.id
+                item =>
+                    item.id === device.id
             )
-
 
         /*
         |--------------------------------------------------------------------------
-        | NEW DEVICE
+        | Yangi qurilma
         |--------------------------------------------------------------------------
         */
 
         if (!previous) {
 
-            notify(
+            addDeviceNotification(
+                device,
                 'Yangi qurilma',
-                `${device.name || 'Noma\'lum'} (${device.ip_address})`,
-                device
+                'NEW_DEVICE'
             )
 
             return
@@ -299,7 +284,7 @@ const checkChanges = (
 
         /*
         |--------------------------------------------------------------------------
-        | ONLINE / OFFLINE
+        | Status o'zgardi
         |--------------------------------------------------------------------------
         */
 
@@ -312,18 +297,18 @@ const checkChanges = (
                 device.status === 'ONLINE'
             ) {
 
-                notify(
-                    'Qurilma online bo‘ldi',
-                    `${device.name || 'Noma\'lum'} (${device.ip_address})`,
-                    device
+                addDeviceNotification(
+                    device,
+                    'Qurilma online',
+                    'DEVICE_ONLINE'
                 )
 
             } else {
 
-                notify(
-                    'Qurilma offline bo‘ldi',
-                    `${device.name || 'Noma\'lum'} (${device.ip_address})`,
-                    device
+                addDeviceNotification(
+                    device,
+                    'Qurilma offline',
+                    'DEVICE_OFFLINE'
                 )
 
             }
@@ -333,7 +318,7 @@ const checkChanges = (
 
         /*
         |--------------------------------------------------------------------------
-        | IP CHANGED
+        | IP o'zgardi
         |--------------------------------------------------------------------------
         */
 
@@ -342,10 +327,10 @@ const checkChanges = (
             device.ip_address
         ) {
 
-            notify(
-                'IP manzil o‘zgardi',
-                `${device.name || 'Noma\'lum'}: ${previous.ip_address} → ${device.ip_address}`,
-                device
+            addDeviceNotification(
+                device,
+                'IP o‘zgardi',
+                'IP_CHANGED'
             )
 
         }
@@ -353,7 +338,7 @@ const checkChanges = (
 
         /*
         |--------------------------------------------------------------------------
-        | MAC CHANGED
+        | MAC o'zgardi
         |--------------------------------------------------------------------------
         */
 
@@ -362,55 +347,79 @@ const checkChanges = (
             device.mac_address
         ) {
 
-            notify(
-                'MAC manzil o‘zgardi',
-                `${device.name || 'Noma\'lum'}: ${previous.mac_address} → ${device.mac_address}`,
-                device
+            addDeviceNotification(
+                device,
+                'MAC o‘zgardi',
+                'MAC_CHANGED'
             )
 
         }
 
+    })
 
-        /*
-        |--------------------------------------------------------------------------
-        | LATEST LOG CHANGED
-        |--------------------------------------------------------------------------
-        */
+}
 
-        if (
-            previous.latest_log?.id !==
-            device.latest_log?.id
-        ) {
+const addDeviceNotification = (
+    device,
+    title,
+    eventType
+) => {
 
-            const event =
-                device.latest_log?.event_type
+    /*
+    |--------------------------------------------------------------------------
+    | Shu qurilma notification olgan deb belgilaymiz
+    |--------------------------------------------------------------------------
+    */
 
-            /*
-            | Agar yuqoridagi status/IP/MAC
-            | notification allaqachon chiqargan bo‘lsa,
-            | yana ikkinchi marta notification bermaymiz.
-            */
+    changedDevices.value = {
 
-            if (
-                event &&
-                event !== 'DEVICE_ONLINE' &&
-                event !== 'DEVICE_OFFLINE' &&
-                event !== 'IP_CHANGED' &&
-                event !== 'MAC_CHANGED' &&
-                event !== 'NEW_DEVICE'
-            ) {
+        ...changedDevices.value,
 
-                notify(
-                    eventName(event),
-                    device.latest_log?.message ||
-                    `${device.name || 'Noma\'lum'} hodisa`
-                )
+        [device.id]: {
 
-            }
+            id: device.id,
+
+            title,
+
+            eventType,
+
+            deviceName:
+                device.name ||
+                'Noma\'lum qurilma',
+
+            ip:
+                device.ip_address
 
         }
 
-    })
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notification oynasi
+    |--------------------------------------------------------------------------
+    */
+
+    notification.value = {
+
+        show: true,
+
+        title,
+
+        message:
+            `${device.name || 'Noma\'lum qurilma'} (${device.ip_address})`
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Ovoz
+    |--------------------------------------------------------------------------
+    */
+
+    playNotificationSound()
 
 }
 
@@ -480,6 +489,33 @@ const goDevice = (
     id
 ) => {
 
+    /*
+    |--------------------------------------------------------------------------
+    | Faqat bosilgan qurilmaning notificationini o'chiramiz
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        changedDevices.value[id]
+    ) {
+
+        const updated = {
+            ...changedDevices.value
+        }
+
+        delete updated[id]
+
+        changedDevices.value = updated
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Device detail sahifasiga o'tamiz
+    |--------------------------------------------------------------------------
+    */
+
     router.push(
         '/devices/' + id
     )
@@ -492,93 +528,8 @@ const goDevice = (
 | Notification
 |--------------------------------------------------------------------------
 */
-const notify = (
-    title,
-    message,
-    device = null
-) => {
-
-    const id = ++notificationId
-
-    notifications.value.push({
-
-        id,
-
-        title,
-
-        message
-
-    })
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Device jadvalida highlight
-    |--------------------------------------------------------------------------
-    */
-
-    if (device) {
-
-        changedDevices.value = {
-
-            ...changedDevices.value,
-
-            [device.id]: {
-
-                title,
-
-                event: device.latest_log?.event_type || null
-
-            }
-
-        }
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Notification sound
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        settings.value.notification_sound
-    ) {
-
-        audio.currentTime = 0
-
-        audio
-            .play()
-            .catch(() => { })
-
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Tepadan notificationni avtomatik o‘chirish
-    |--------------------------------------------------------------------------
-    */
-
-    setTimeout(() => {
-
-        removeNotification(id)
-
-    }, 10000)
-
-}
-
-const removeNotification = (
-    id
-) => {
-
-    notifications.value =
-        notifications.value.filter(
-            item => item.id !== id
-        )
-
-}
 /*
 |--------------------------------------------------------------------------
 | Search

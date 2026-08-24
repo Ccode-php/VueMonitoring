@@ -151,8 +151,7 @@
                                 <span
                                     class="font-semibold"
 
-                                    :class="
-                                        props.changedDevices[device.id]
+                                    :class="props.changedDevices[device.id]
                                             ? 'text-yellow-700'
                                             : 'text-slate-700'
                                     "
