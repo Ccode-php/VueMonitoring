@@ -161,70 +161,148 @@ let notificationId = 0
 
 const changedDevices = ref({})
 
+/*
+|--------------------------------------------------------------------------
+| Notification Audio
+|--------------------------------------------------------------------------
+*/
+
 const audio = new Audio('/notification.mp3')
 
-audio.loop = true
 audio.preload = 'auto'
+audio.volume = 1
+
 let audioUnlocked = false
 
-const unlockAudio = async () => {
+
+/*
+|--------------------------------------------------------------------------
+| Chrome audio unlock
+|--------------------------------------------------------------------------
+*/
+
+const unlockAudio = () => {
 
     if (audioUnlocked) {
-
         return
-
     }
 
-    try {
+    /*
+    | Browser user interaction bo'lganini bilishi kerak.
+    */
 
-        audio.muted = true
+    audio.muted = true
 
-        await audio.play()
+    const promise = audio.play()
 
-        audio.pause()
+    if (promise !== undefined) {
 
-        audio.currentTime = 0
+        promise
+            .then(() => {
 
-        audio.muted = false
+                audio.pause()
 
-        audioUnlocked = true
+                audio.currentTime = 0
 
-    } catch (error) {
+                audio.muted = false
 
-        console.warn(
-            'Audio unlock failed:',
-            error
-        )
+                audioUnlocked = true
+
+                console.log(
+                    '🔊 Notification audio unlocked'
+                )
+
+            })
+            .catch(error => {
+
+                console.warn(
+                    'Audio unlock failed:',
+                    error
+                )
+
+            })
 
     }
 
 }
 
-const playNotificationSound = async () => {
 
-    if (!settings.value.notification_sound) {
+/*
+|--------------------------------------------------------------------------
+| Notification sound
+|--------------------------------------------------------------------------
+*/
+
+const playNotificationSound = () => {
+
+    if (
+        !settings.value.notification_sound
+    ) {
+
+        console.log(
+            '🔇 Notification sound OFF'
+        )
 
         return
 
     }
 
-    try {
 
-        audio.currentTime = 0
+    /*
+    | Agar Chrome hali audio'ni unlock qilmagan bo'lsa
+    */
 
-        await audio.play()
-
-    } catch (error) {
+    if (!audioUnlocked) {
 
         console.warn(
-            'Notification sound blocked:',
-            error
+            '🔒 Audio is not unlocked'
         )
+
+        return
+
+    }
+
+
+    audio.pause()
+
+    audio.currentTime = 0
+
+    audio.muted = false
+
+    audio.volume = 1
+
+
+    const promise = audio.play()
+
+    if (promise !== undefined) {
+
+        promise
+            .then(() => {
+
+                console.log(
+                    '🔊 Notification sound played'
+                )
+
+            })
+            .catch(error => {
+
+                console.error(
+                    '❌ Notification sound error:',
+                    error
+                )
+
+            })
 
     }
 
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| Stop sound
+|--------------------------------------------------------------------------
+*/
 
 const stopNotificationSound = () => {
 
@@ -806,33 +884,54 @@ const handleSettingsUpdated = async () => {
 
 onMounted(async () => {
 
-loadFromStorage()
+    loadFromStorage()
 
-await loadSettings()
-
-
-document.addEventListener(
-    'click',
-    unlockAudio,
-    {
-        once: true
-    }
-)
+    await loadSettings()
 
 
-window.addEventListener(
-    'app-settings-updated',
-    handleSettingsUpdated
-)
+    /*
+    |--------------------------------------------------------------------------
+    | Chrome audio permission
+    |--------------------------------------------------------------------------
+    */
+
+    document.addEventListener(
+        'pointerdown',
+        unlockAudio
+    )
 
 
-await loadDevices(
-    1,
-    false
-)
+    /*
+    |--------------------------------------------------------------------------
+    | Settings update
+    |--------------------------------------------------------------------------
+    */
+
+    window.addEventListener(
+        'app-settings-updated',
+        handleSettingsUpdated
+    )
 
 
-startAutoRefresh()
+    /*
+    |--------------------------------------------------------------------------
+    | First load
+    |--------------------------------------------------------------------------
+    */
+
+    await loadDevices(
+        1,
+        false
+    )
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Auto refresh
+    |--------------------------------------------------------------------------
+    */
+
+    startAutoRefresh()
 
 })
 
@@ -851,9 +950,16 @@ clearTimeout(searchTimer)
 
 stopNotificationSound()
 
+
 document.removeEventListener(
-    'click',
+    'pointerdown',
     unlockAudio
+)
+
+
+window.removeEventListener(
+    'app-settings-updated',
+    handleSettingsUpdated
 )
 
 })
