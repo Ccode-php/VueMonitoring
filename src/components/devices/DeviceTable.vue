@@ -1,14 +1,34 @@
 <template>
 
-    <div class="bg-white rounded-xl shadow max-h-[700px] overflow-auto">
+    <div
+        class="
+            bg-white
+            rounded-xl
+            shadow
+            max-h-[700px]
+            overflow-auto
+        "
+    >
 
         <table class="w-full">
 
             <thead
-                class="bg-slate-300 sticky top-0 z-10 shadow-sm"
+                class="
+                    bg-slate-300
+                    sticky
+                    top-0
+                    z-10
+                    shadow-sm
+                "
             >
 
-                <tr class="text-slate-900 text-sm uppercase">
+                <tr
+                    class="
+                        text-slate-900
+                        text-sm
+                        uppercase
+                    "
+                >
 
                     <th class="px-5 py-4 text-left">
                         Qurilma
@@ -41,7 +61,12 @@
                     v-for="device in props.devices"
                     :key="device.id"
 
-                    @click="emit('select', device.id)"
+                    @click="
+                        emit(
+                            'select',
+                            device.id
+                        )
+                    "
 
                     :class="[
 
@@ -49,7 +74,9 @@
 
                         'hover:bg-blue-50',
 
-                        'transition duration-200',
+                        'transition',
+
+                        'duration-200',
 
                         'cursor-pointer',
 
@@ -64,9 +91,17 @@
 
                     <td class="px-5 py-4">
 
-                        <div class="text-slate-900 font-medium">
+                        <div
+                            class="
+                                text-slate-900
+                                font-medium
+                            "
+                        >
 
-                            {{ device.name || 'Noma\'lum qurilma' }}
+                            {{
+                                device.name ||
+                                'Noma\'lum qurilma'
+                            }}
 
                         </div>
 
@@ -77,7 +112,12 @@
 
                     <td class="px-5 py-4">
 
-                        <span class="text-blue-900 font-mono">
+                        <span
+                            class="
+                                text-blue-900
+                                font-mono
+                            "
+                        >
 
                             {{ device.ip_address }}
 
@@ -90,7 +130,12 @@
 
                     <td class="px-5 py-4">
 
-                        <span class="text-slate-900 font-mono">
+                        <span
+                            class="
+                                text-slate-900
+                                font-mono
+                            "
+                        >
 
                             {{ device.mac_address }}
 
@@ -101,12 +146,25 @@
 
                     <!-- STATUS -->
 
-                    <td class="px-5 py-4 text-center">
+                    <td
+                        class="
+                            px-5
+                            py-4
+                            text-center
+                        "
+                    >
 
-                        <div class="flex justify-center">
+                        <div
+                            class="
+                                flex
+                                justify-center
+                            "
+                        >
 
                             <StatusBadge
-                                :status="device.status"
+                                :status="
+                                    device.status
+                                "
                             />
 
                         </div>
@@ -118,14 +176,28 @@
 
                     <td class="px-5 py-4">
 
-                        <div v-if="device.latest_log">
+                        <div
+                            v-if="
+                                device.latest_log
+                            "
+                        >
 
-                            <div class="flex items-center gap-2">
+                            <div
+                                class="
+                                    flex
+                                    items-center
+                                    gap-2
+                                "
+                            >
 
-                                <!-- CHANGE INDICATOR -->
+                                <!-- CHANGE -->
 
                                 <span
-                                    v-if="props.changedDevices[device.id]"
+                                    v-if="
+                                        props.changedDevices[
+                                            device.id
+                                        ]
+                                    "
 
                                     class="
                                         inline-flex
@@ -146,20 +218,28 @@
                                 </span>
 
 
-                                <!-- EVENT NAME -->
+                                <!-- EVENT -->
 
                                 <span
-                                    class="font-semibold"
+                                    class="
+                                        font-semibold
+                                    "
 
-                                    :class="props.changedDevices[device.id]
+                                    :class="
+                                        props.changedDevices[
+                                            device.id
+                                        ]
+
                                             ? 'text-yellow-700'
+
                                             : 'text-slate-700'
                                     "
                                 >
 
                                     {{
                                         eventName(
-                                            device.latest_log.event_type
+                                            device.latest_log
+                                                .event_type
                                         )
                                     }}
 
@@ -178,17 +258,22 @@
                                 "
                             >
 
-                                {{ device.latest_log.message }}
+                                {{
+                                    device.latest_log
+                                        .message
+                                }}
 
                             </div>
 
 
-                            <!-- IP CHANGE -->
+                            <!-- IP -->
 
                             <div
                                 v-if="
-                                    device.latest_log.old_ip ||
-                                    device.latest_log.new_ip
+                                    device.latest_log
+                                        .old_ip ||
+                                    device.latest_log
+                                        .new_ip
                                 "
 
                                 class="
@@ -200,21 +285,29 @@
 
                                 IP:
 
-                                {{ device.latest_log.old_ip || '-' }}
+                                {{
+                                    device.latest_log
+                                        .old_ip || '-'
+                                }}
 
                                 →
 
-                                {{ device.latest_log.new_ip || '-' }}
+                                {{
+                                    device.latest_log
+                                        .new_ip || '-'
+                                }}
 
                             </div>
 
 
-                            <!-- MAC CHANGE -->
+                            <!-- MAC -->
 
                             <div
                                 v-if="
-                                    device.latest_log.old_mac ||
-                                    device.latest_log.new_mac
+                                    device.latest_log
+                                        .old_mac ||
+                                    device.latest_log
+                                        .new_mac
                                 "
 
                                 class="
@@ -226,22 +319,28 @@
 
                                 MAC:
 
-                                {{ device.latest_log.old_mac || '-' }}
+                                {{
+                                    device.latest_log
+                                        .old_mac || '-'
+                                }}
 
                                 →
 
-                                {{ device.latest_log.new_mac || '-' }}
+                                {{
+                                    device.latest_log
+                                        .new_mac || '-'
+                                }}
 
                             </div>
 
                         </div>
 
 
-                        <!-- NO EVENT -->
-
                         <div
                             v-else
-                            class="text-slate-400"
+                            class="
+                                text-slate-400
+                            "
                         >
 
                             Hodisa yo'q
@@ -256,11 +355,14 @@
                 <!-- EMPTY -->
 
                 <tr
-                    v-if="props.devices.length === 0"
+                    v-if="
+                        props.devices.length === 0
+                    "
                 >
 
                     <td
                         colspan="5"
+
                         class="
                             py-12
                             text-center
@@ -311,13 +413,13 @@ const props = defineProps({
 
 
 const emit = defineEmits([
-
     'select'
-
 ])
 
 
-const eventName = (event) => {
+const eventName = (
+    event
+) => {
 
     const events = {
 
@@ -339,7 +441,10 @@ const eventName = (event) => {
     }
 
 
-    return events[event] || event
+    return (
+        events[event] ||
+        event
+    )
 
 }
 
