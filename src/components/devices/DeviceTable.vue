@@ -1,7 +1,8 @@
+```vue
 <template>
 
     <div
-        class="bg-white rounded-xl shadow max-h-[700px] overflow-auto"
+        class="bg-white rounded-xl shadow"
     >
 
         <table class="w-full">
@@ -11,7 +12,7 @@
             =========================================================== -->
 
             <thead
-                class="bg-slate-300 sticky top-0 z-10 shadow-sm"
+                class="bg-slate-300"
             >
 
                 <tr
@@ -427,3 +428,4 @@ const eventName = (
 }
 
 </script>
+```
