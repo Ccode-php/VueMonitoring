@@ -2,7 +2,9 @@
 
     <div>
 
-        <!-- HEADER -->
+        <!-- ==============================================================
+             HEADER
+        ============================================================== -->
 
         <div
             class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-3"
@@ -40,14 +42,18 @@
         </div>
 
 
-        <!-- SEARCH -->
+        <!-- ==============================================================
+             SEARCH
+        ============================================================== -->
 
         <DeviceFilter
             v-model:search="search"
         />
 
 
-        <!-- DEVICES TABLE -->
+        <!-- ==============================================================
+             DEVICES TABLE
+        ============================================================== -->
 
         <DeviceTable
             :devices="devices"
@@ -56,7 +62,9 @@
         />
 
 
-        <!-- NOTIFICATIONS -->
+        <!-- ==============================================================
+             NOTIFICATIONS
+        ============================================================== -->
 
         <div
             class="fixed top-5 right-5 w-96 z-50 space-y-3"
@@ -68,7 +76,17 @@
 
                 @click.stop="removeNotification(item.id)"
 
-                class="bg-white rounded-xl shadow-2xl border-l-4 border-blue-500 p-4 cursor-pointer hover:bg-blue-50 transition"
+                class="
+                    bg-white
+                    rounded-xl
+                    shadow-2xl
+                    border-l-4
+                    border-blue-500
+                    p-4
+                    cursor-pointer
+                    hover:bg-blue-50
+                    transition
+                "
             >
 
                 <div class="font-bold text-slate-800">
@@ -96,7 +114,9 @@
         </div>
 
 
-        <!-- PAGINATION -->
+        <!-- ==============================================================
+             PAGINATION
+        ============================================================== -->
 
         <Pagination
             :pagination="pagination"
@@ -190,10 +210,8 @@ let searchTimer = null
 | First load
 |--------------------------------------------------------------------------
 |
-| Bu juda muhim.
-|
-| Birinchi /devices yuklanishida mavjud qurilmalarni
-| notification sifatida hisoblamaymiz.
+| Birinchi /devices yuklanganda mavjud qurilmalarni
+| yangi notification deb hisoblamaymiz.
 |
 */
 
@@ -218,21 +236,49 @@ let notificationId = 0
 | AUDIO
 |--------------------------------------------------------------------------
 |
-| Chrome bilan muammo bo'lmasligi uchun bitta Audio obyektni
-| qayta-qayta ishlatmaymiz.
+| MUHIM:
 |
-| Har bir notification uchun yangi Audio yaratiladi.
+| Faqat BITTA Audio obyekt ishlatiladi.
+|
+| Hodisa kelganda:
+|
+|     audio.play()
+|
+| Ovoz:
+|
+|     loop = true
+|
+| bo'lgani uchun notification yopilmaguncha davom etadi.
+|
+|--------------------------------------------------------------------------
+*/
+
+const notificationAudio =
+    new Audio('/notification.mp3')
+
+
+notificationAudio.loop = true
+
+notificationAudio.preload = 'auto'
+
+notificationAudio.volume = 1
+
+
+/*
+|--------------------------------------------------------------------------
+| Audio unlock
+|--------------------------------------------------------------------------
+|
+| Chrome birinchi user interactionsiz audio qo'yishga ruxsat bermasligi
+| mumkin.
+|
+| Shuning uchun foydalanuvchi birinchi marta sahifani bosganda
+| audio unlock qilamiz.
 |
 */
 
 let audioUnlocked = false
 
-
-/*
-|--------------------------------------------------------------------------
-| Unlock audio
-|--------------------------------------------------------------------------
-*/
 
 const unlockAudio = async () => {
 
@@ -245,26 +291,18 @@ const unlockAudio = async () => {
 
     try {
 
-        const testAudio =
-            new Audio('/notification.mp3')
+        notificationAudio.muted = true
 
+        await notificationAudio.play()
 
-        testAudio.muted = true
+        notificationAudio.pause()
 
-        testAudio.volume = 0
+        notificationAudio.currentTime = 0
 
-        await testAudio.play()
-
-        testAudio.pause()
-
-        testAudio.currentTime = 0
-
-        testAudio.removeAttribute('src')
-
-        testAudio.load()
-
+        notificationAudio.muted = false
 
         audioUnlocked = true
+
 
         console.log(
             '🔊 Notification audio unlocked'
@@ -284,11 +322,16 @@ const unlockAudio = async () => {
 
 /*
 |--------------------------------------------------------------------------
-| Play notification sound
+| Start notification sound
 |--------------------------------------------------------------------------
+|
+| Notification mavjud bo'lsa ovoz boshlanadi.
+|
+| Agar ovoz allaqachon chalayotgan bo'lsa qaytadan boshlamaymiz.
+|
 */
 
-const playNotificationSound = () => {
+const startNotificationSound = async () => {
 
     if (
         !settings.value.notification_sound
@@ -298,6 +341,10 @@ const playNotificationSound = () => {
 
     }
 
+
+    /*
+    | Audio hali Chrome tomonidan unlock qilinmagan.
+    */
 
     if (!audioUnlocked) {
 
@@ -310,46 +357,56 @@ const playNotificationSound = () => {
     }
 
 
+    /*
+    | Ovoz allaqachon chalayotgan bo'lsa
+    | yana play qilmaymiz.
+    */
+
+    if (
+        !notificationAudio.paused
+    ) {
+
+        return
+
+    }
+
+
     try {
 
-        /*
-        | Har bir hodisa uchun yangi Audio.
-        */
+        notificationAudio.muted = false
 
-        const sound =
-            new Audio('/notification.mp3')
+        notificationAudio.currentTime = 0
 
-
-        sound.volume = 1
-
-        sound.currentTime = 0
+        await notificationAudio.play()
 
 
-        sound.play()
-            .then(() => {
-
-                console.log(
-                    '🔊 Notification sound played'
-                )
-
-            })
-            .catch(error => {
-
-                console.error(
-                    '❌ Notification sound error:',
-                    error
-                )
-
-            })
+        console.log(
+            '🔊 Notification sound started'
+        )
 
     } catch (error) {
 
         console.error(
-            '❌ Audio creation error:',
+            '❌ Notification sound error:',
             error
         )
 
     }
+
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Stop notification sound
+|--------------------------------------------------------------------------
+*/
+
+const stopNotificationSound = () => {
+
+    notificationAudio.pause()
+
+    notificationAudio.currentTime = 0
 
 }
 
@@ -368,7 +425,9 @@ const loadDevices = async (
     try {
 
         /*
-        | Old devices.
+        |--------------------------------------------------------------------------
+        | Eski qurilmalar
+        |--------------------------------------------------------------------------
         */
 
         const oldDevices =
@@ -380,7 +439,9 @@ const loadDevices = async (
 
 
         /*
-        | API.
+        |--------------------------------------------------------------------------
+        | API
+        |--------------------------------------------------------------------------
         */
 
         const response =
@@ -400,16 +461,19 @@ const loadDevices = async (
             )
 
 
-        /*
-        | New devices.
-        */
-
         const newDevices =
             response.data.data || []
 
 
         /*
-        | Birinchi yuklanishda notification YO'Q.
+        |--------------------------------------------------------------------------
+        | CHANGE DETECTION
+        |--------------------------------------------------------------------------
+        |
+        | Faqat AUTO REFRESH paytida ishlaydi.
+        |
+        | Birinchi yuklanishda ishlamaydi.
+        |
         */
 
         if (
@@ -426,7 +490,9 @@ const loadDevices = async (
 
 
         /*
-        | Table update.
+        |--------------------------------------------------------------------------
+        | Table
+        |--------------------------------------------------------------------------
         */
 
         devices.value =
@@ -434,7 +500,9 @@ const loadDevices = async (
 
 
         /*
-        | Pagination.
+        |--------------------------------------------------------------------------
+        | Pagination
+        |--------------------------------------------------------------------------
         */
 
         pagination.value = {
@@ -455,14 +523,18 @@ const loadDevices = async (
 
 
         /*
-        | First load tugadi.
+        |--------------------------------------------------------------------------
+        | First load tugadi
+        |--------------------------------------------------------------------------
         */
 
         firstLoad.value = false
 
 
         /*
-        | Refresh time.
+        |--------------------------------------------------------------------------
+        | Refresh time
+        |--------------------------------------------------------------------------
         */
 
         lastRefresh.value =
@@ -491,10 +563,6 @@ const checkChanges = (
     newDevices
 ) => {
 
-    /*
-    | Faqat mavjud eski device bilan solishtiramiz.
-    */
-
     newDevices.forEach(device => {
 
         const oldDevice =
@@ -506,7 +574,7 @@ const checkChanges = (
 
         /*
         |--------------------------------------------------------------------------
-        | Yangi qurilma
+        | YANGI QURILMA
         |--------------------------------------------------------------------------
         */
 
@@ -525,7 +593,7 @@ const checkChanges = (
 
         /*
         |--------------------------------------------------------------------------
-        | Status o'zgardi
+        | STATUS O'ZGARDI
         |--------------------------------------------------------------------------
         */
 
@@ -559,7 +627,7 @@ const checkChanges = (
 
         /*
         |--------------------------------------------------------------------------
-        | IP o'zgardi
+        | IP O'ZGARDI
         |--------------------------------------------------------------------------
         */
 
@@ -579,7 +647,7 @@ const checkChanges = (
 
         /*
         |--------------------------------------------------------------------------
-        | MAC o'zgardi
+        | MAC O'ZGARDI
         |--------------------------------------------------------------------------
         */
 
@@ -614,7 +682,9 @@ const addNotification = (
 ) => {
 
     /*
-    | Notification.
+    |--------------------------------------------------------------------------
+    | Notification yaratamiz
+    |--------------------------------------------------------------------------
     */
 
     const notification = {
@@ -650,9 +720,6 @@ const addNotification = (
     |--------------------------------------------------------------------------
     | Device highlight
     |--------------------------------------------------------------------------
-    |
-    | Bir device uchun bir nechta notification bo'lishi mumkin.
-    |
     */
 
     changedDevices.value = {
@@ -682,11 +749,16 @@ const addNotification = (
 
     /*
     |--------------------------------------------------------------------------
-    | Sound
+    | OVOZ
     |--------------------------------------------------------------------------
+    |
+    | Notification paydo bo'lishi bilan ovoz boshlanadi.
+    |
+    | Audio loop=true.
+    |
     */
 
-    playNotificationSound()
+    startNotificationSound()
 
 }
 
@@ -696,7 +768,7 @@ const addNotification = (
 | Remove notification
 |--------------------------------------------------------------------------
 |
-| Faqat BOSILGAN notification o'chadi.
+| FAQAT BOSILGAN notification o'chadi.
 |
 */
 
@@ -720,7 +792,7 @@ const removeNotification = (
 
     /*
     |--------------------------------------------------------------------------
-    | Faqat shu notification.
+    | Faqat bosilgan notificationni o'chiramiz
     |--------------------------------------------------------------------------
     */
 
@@ -733,7 +805,7 @@ const removeNotification = (
 
     /*
     |--------------------------------------------------------------------------
-    | Shu device uchun boshqa notification bormi?
+    | Shu qurilmada notification qolganmi?
     |--------------------------------------------------------------------------
     */
 
@@ -747,7 +819,8 @@ const removeNotification = (
 
     /*
     |--------------------------------------------------------------------------
-    | Agar qolmagan bo'lsa table highlightni o'chiramiz.
+    | Agar shu device uchun notification qolmagan bo'lsa
+    | sariq belgini o'chiramiz.
     |--------------------------------------------------------------------------
     */
 
@@ -770,12 +843,41 @@ const removeNotification = (
 
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | ENG MUHIM QISM
+    |--------------------------------------------------------------------------
+    |
+    | Boshqa notificationlar bo'lsa ovoz davom etadi.
+    |
+    | Hech qanday notification qolmasa ovoz to'xtaydi.
+    |
+    */
+
+    if (
+        notifications.value.length === 0
+    ) {
+
+        stopNotificationSound()
+
+    }
+
 }
 
 
 /*
 |--------------------------------------------------------------------------
 | Open device
+|--------------------------------------------------------------------------
+|
+| Device ustiga bosilganda:
+|
+| - shu device notificationlari o'chadi
+| - boshqa device notificationlari QOLADI
+| - boshqa notification bo'lsa ovoz davom etadi
+| - notification umuman qolmasa ovoz to'xtaydi
+|
 |--------------------------------------------------------------------------
 */
 
@@ -784,10 +886,9 @@ const goDevice = (
 ) => {
 
     /*
-    | Muhim:
-    |
-    | Qurilmaga kirganda FAQAT shu qurilmaning
-    | notificationlarini o'chiramiz.
+    |--------------------------------------------------------------------------
+    | Faqat shu device notificationlarini o'chiramiz
+    |--------------------------------------------------------------------------
     */
 
     notifications.value =
@@ -798,7 +899,9 @@ const goDevice = (
 
 
     /*
-    | Table highlight ham faqat shu device uchun.
+    |--------------------------------------------------------------------------
+    | Faqat shu device highlightini o'chiramiz
+    |--------------------------------------------------------------------------
     */
 
     const updated = {
@@ -814,7 +917,24 @@ const goDevice = (
 
 
     /*
-    | Device detail.
+    |--------------------------------------------------------------------------
+    | Notification qolmagan bo'lsa ovozni to'xtatamiz
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        notifications.value.length === 0
+    ) {
+
+        stopNotificationSound()
+
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Device detail
+    |--------------------------------------------------------------------------
     */
 
     router.push(
@@ -898,7 +1018,9 @@ watch(
 const startAutoRefresh = () => {
 
     /*
-    | Eski timer.
+    |--------------------------------------------------------------------------
+    | Eski timer
+    |--------------------------------------------------------------------------
     */
 
     if (refreshTimer) {
@@ -913,7 +1035,9 @@ const startAutoRefresh = () => {
 
 
     /*
-    | Auto refresh OFF.
+    |--------------------------------------------------------------------------
+    | Auto refresh OFF
+    |--------------------------------------------------------------------------
     */
 
     if (
@@ -926,7 +1050,9 @@ const startAutoRefresh = () => {
 
 
     /*
-    | Interval.
+    |--------------------------------------------------------------------------
+    | Interval
+    |--------------------------------------------------------------------------
     */
 
     const seconds =
@@ -964,6 +1090,20 @@ const handleSettingsUpdated =
 
         await loadSettings()
 
+        /*
+        | Agar notification sound o'chirilgan bo'lsa
+        | hozirgi ovozni ham to'xtatamiz.
+        */
+
+        if (
+            !settings.value.notification_sound
+        ) {
+
+            stopNotificationSound()
+
+        }
+
+
         startAutoRefresh()
 
     }
@@ -991,11 +1131,11 @@ onMounted(
 
         /*
         |--------------------------------------------------------------------------
-        | Chrome audio permission
+        | Chrome audio unlock
         |--------------------------------------------------------------------------
         |
-        | Birinchi foydalanuvchi interactionida audio unlock qilinadi.
-        |
+        | Birinchi user interactionda Chrome audio'ga ruxsat beradi.
+        |--------------------------------------------------------------------------
         */
 
         document.addEventListener(
@@ -1009,7 +1149,7 @@ onMounted(
 
         /*
         |--------------------------------------------------------------------------
-        | Settings event
+        | Settings listener
         |--------------------------------------------------------------------------
         */
 
@@ -1021,11 +1161,11 @@ onMounted(
 
         /*
         |--------------------------------------------------------------------------
-        | First load
+        | Birinchi yuklanish
         |--------------------------------------------------------------------------
         |
-        | Bu yuklanish notification chiqarmaydi.
-        |
+        | Mavjud qurilmalar notification qilinmaydi.
+        |--------------------------------------------------------------------------
         */
 
         firstLoad.value = true
@@ -1059,7 +1199,9 @@ onUnmounted(
     () => {
 
         /*
-        | Timer.
+        |--------------------------------------------------------------------------
+        | Refresh timer
+        |--------------------------------------------------------------------------
         */
 
         if (refreshTimer) {
@@ -1074,7 +1216,9 @@ onUnmounted(
 
 
         /*
-        | Search timer.
+        |--------------------------------------------------------------------------
+        | Search timer
+        |--------------------------------------------------------------------------
         */
 
         clearTimeout(
@@ -1083,7 +1227,18 @@ onUnmounted(
 
 
         /*
-        | Audio listener.
+        |--------------------------------------------------------------------------
+        | Audio
+        |--------------------------------------------------------------------------
+        */
+
+        stopNotificationSound()
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Audio listener
+        |--------------------------------------------------------------------------
         */
 
         document.removeEventListener(
@@ -1093,7 +1248,9 @@ onUnmounted(
 
 
         /*
-        | Settings listener.
+        |--------------------------------------------------------------------------
+        | Settings listener
+        |--------------------------------------------------------------------------
         */
 
         window.removeEventListener(
