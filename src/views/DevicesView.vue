@@ -47,7 +47,7 @@
         />
 
 
-        <!-- TABLE -->
+        <!-- DEVICES TABLE -->
 
         <DeviceTable
             :devices="devices"
@@ -66,53 +66,17 @@
                 v-for="item in notifications"
                 :key="item.id"
 
-                @click="openNotification(item)"
+                @click.stop="removeNotification(item.id)"
 
-                class="
-                    bg-white
-                    rounded-xl
-                    shadow-2xl
-                    border-l-4
-                    p-4
-                    cursor-pointer
-                    hover:bg-blue-50
-                    transition
-                "
-
-                :class="notificationBorder(item.eventType)"
+                class="bg-white rounded-xl shadow-2xl border-l-4 border-blue-500 p-4 cursor-pointer hover:bg-blue-50 transition"
             >
 
-                <!-- TITLE -->
+                <div class="font-bold text-slate-800">
 
-                <div class="flex items-center gap-2">
-
-                    <span class="text-lg">
-
-                        {{ notificationIcon(item.eventType) }}
-
-                    </span>
-
-                    <div class="font-bold text-slate-800">
-
-                        {{ item.title }}
-
-                    </div>
+                    {{ item.title }}
 
                 </div>
 
-
-                <!-- DEVICE -->
-
-                <div
-                    class="text-blue-700 font-medium mt-1"
-                >
-
-                    {{ item.deviceName }}
-
-                </div>
-
-
-                <!-- MESSAGE -->
 
                 <div class="text-gray-600 mt-1">
 
@@ -121,13 +85,9 @@
                 </div>
 
 
-                <!-- TIME -->
-
                 <div class="text-xs text-gray-400 mt-2">
 
-                    {{ item.time }}
-
-                    · Batafsil ko'rish uchun bosing
+                    Yopish uchun bosing
 
                 </div>
 
@@ -220,9 +180,7 @@ const lastRefresh = ref('-')
 |--------------------------------------------------------------------------
 */
 
-let deviceTimer = null
-
-let notificationTimer = null
+let refreshTimer = null
 
 let searchTimer = null
 
@@ -231,6 +189,12 @@ let searchTimer = null
 |--------------------------------------------------------------------------
 | First load
 |--------------------------------------------------------------------------
+|
+| Bu juda muhim.
+|
+| Birinchi /devices yuklanishida mavjud qurilmalarni
+| notification sifatida hisoblamaymiz.
+|
 */
 
 const firstLoad = ref(true)
@@ -251,31 +215,24 @@ let notificationId = 0
 
 /*
 |--------------------------------------------------------------------------
-| Last processed log ID
-|--------------------------------------------------------------------------
-*/
-
-const lastNotificationId =
-    ref(
-        Number(
-            localStorage.getItem(
-                'last_notification_id'
-            ) || 0
-        )
-    )
-
-
-/*
-|--------------------------------------------------------------------------
-| Audio
+| AUDIO
 |--------------------------------------------------------------------------
 |
-| Har bir notification uchun alohida Audio.
+| Chrome bilan muammo bo'lmasligi uchun bitta Audio obyektni
+| qayta-qayta ishlatmaymiz.
+|
+| Har bir notification uchun yangi Audio yaratiladi.
 |
 */
 
 let audioUnlocked = false
 
+
+/*
+|--------------------------------------------------------------------------
+| Unlock audio
+|--------------------------------------------------------------------------
+*/
 
 const unlockAudio = async () => {
 
@@ -288,24 +245,24 @@ const unlockAudio = async () => {
 
     try {
 
-        const sound =
-            new Audio(
-                '/notification.mp3'
-            )
+        const testAudio =
+            new Audio('/notification.mp3')
 
-        sound.muted = true
 
-        sound.volume = 0
+        testAudio.muted = true
 
-        await sound.play()
+        testAudio.volume = 0
 
-        sound.pause()
+        await testAudio.play()
 
-        sound.currentTime = 0
+        testAudio.pause()
 
-        sound.muted = false
+        testAudio.currentTime = 0
 
-        sound.volume = 1
+        testAudio.removeAttribute('src')
+
+        testAudio.load()
+
 
         audioUnlocked = true
 
@@ -327,7 +284,7 @@ const unlockAudio = async () => {
 
 /*
 |--------------------------------------------------------------------------
-| Notification sound
+| Play notification sound
 |--------------------------------------------------------------------------
 */
 
@@ -342,32 +299,57 @@ const playNotificationSound = () => {
     }
 
 
-    const sound =
-        new Audio(
-            '/notification.mp3'
+    if (!audioUnlocked) {
+
+        console.warn(
+            '🔒 Audio is not unlocked yet'
         )
 
-    sound.volume = 1
+        return
 
-    sound.preload = 'auto'
+    }
 
 
-    sound.play()
-        .then(() => {
+    try {
 
-            console.log(
-                '🔊 Notification sound played'
-            )
+        /*
+        | Har bir hodisa uchun yangi Audio.
+        */
 
-        })
-        .catch(error => {
+        const sound =
+            new Audio('/notification.mp3')
 
-            console.error(
-                '❌ Notification sound error:',
-                error
-            )
 
-        })
+        sound.volume = 1
+
+        sound.currentTime = 0
+
+
+        sound.play()
+            .then(() => {
+
+                console.log(
+                    '🔊 Notification sound played'
+                )
+
+            })
+            .catch(error => {
+
+                console.error(
+                    '❌ Notification sound error:',
+                    error
+                )
+
+            })
+
+    } catch (error) {
+
+        console.error(
+            '❌ Audio creation error:',
+            error
+        )
+
+    }
 
 }
 
@@ -380,10 +362,26 @@ const playNotificationSound = () => {
 
 const loadDevices = async (
     page = 1,
-    showNotification = false
+    detectChanges = false
 ) => {
 
     try {
+
+        /*
+        | Old devices.
+        */
+
+        const oldDevices =
+            JSON.parse(
+                JSON.stringify(
+                    devices.value
+                )
+            )
+
+
+        /*
+        | API.
+        */
 
         const response =
             await api.get(
@@ -397,13 +395,47 @@ const loadDevices = async (
                             search.value
 
                     }
+
                 }
             )
 
 
-        devices.value =
-            response.data.data
+        /*
+        | New devices.
+        */
 
+        const newDevices =
+            response.data.data || []
+
+
+        /*
+        | Birinchi yuklanishda notification YO'Q.
+        */
+
+        if (
+            detectChanges &&
+            !firstLoad.value
+        ) {
+
+            checkChanges(
+                oldDevices,
+                newDevices
+            )
+
+        }
+
+
+        /*
+        | Table update.
+        */
+
+        devices.value =
+            newDevices
+
+
+        /*
+        | Pagination.
+        */
 
         pagination.value = {
 
@@ -422,10 +454,19 @@ const loadDevices = async (
         }
 
 
-        lastRefresh.value =
-            new Date()
-                .toLocaleTimeString()
+        /*
+        | First load tugadi.
+        */
 
+        firstLoad.value = false
+
+
+        /*
+        | Refresh time.
+        */
+
+        lastRefresh.value =
+            new Date().toLocaleTimeString()
 
     } catch (error) {
 
@@ -435,40 +476,47 @@ const loadDevices = async (
         )
 
     }
+
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| Load NEW notifications
+| Detect changes
 |--------------------------------------------------------------------------
 */
 
-const loadNotifications = async () => {
+const checkChanges = (
+    oldDevices,
+    newDevices
+) => {
 
-    try {
+    /*
+    | Faqat mavjud eski device bilan solishtiramiz.
+    */
 
-        const response =
-            await api.get(
-                '/devices/notifications',
-                {
-                    params: {
+    newDevices.forEach(device => {
 
-                        after_id:
-                            lastNotificationId.value
-
-                    }
-                }
+        const oldDevice =
+            oldDevices.find(
+                item =>
+                    item.id === device.id
             )
 
 
-        const logs =
-            response.data.logs || []
+        /*
+        |--------------------------------------------------------------------------
+        | Yangi qurilma
+        |--------------------------------------------------------------------------
+        */
 
+        if (!oldDevice) {
 
-        if (
-            logs.length === 0
-        ) {
+            addNotification(
+                device,
+                'Yangi qurilma',
+                'NEW_DEVICE'
+            )
 
             return
 
@@ -477,50 +525,53 @@ const loadNotifications = async () => {
 
         /*
         |--------------------------------------------------------------------------
-        | Backend latest -> oldest qaytaryapti.
-        | Biz esa eski -> yangi tartibda ko'rsatamiz.
+        | Status o'zgardi
         |--------------------------------------------------------------------------
         */
 
-        logs.reverse()
+        if (
+            oldDevice.status !==
+            device.status
+        ) {
 
+            if (
+                device.status === 'ONLINE'
+            ) {
 
-        logs.forEach(log => {
+                addNotification(
+                    device,
+                    'Qurilma online',
+                    'DEVICE_ONLINE'
+                )
 
-            addNotification(
-                log
-            )
+            } else {
 
-        })
+                addNotification(
+                    device,
+                    'Qurilma offline',
+                    'DEVICE_OFFLINE'
+                )
+
+            }
+
+        }
 
 
         /*
         |--------------------------------------------------------------------------
-        | Eng katta ID ni saqlaymiz
+        | IP o'zgardi
         |--------------------------------------------------------------------------
         */
 
-        const newLastId =
-            Math.max(
-                ...logs.map(
-                    log =>
-                        Number(log.id)
-                )
-            )
-
-
         if (
-            newLastId >
-            lastNotificationId.value
+            oldDevice.ip_address !==
+            device.ip_address
         ) {
 
-            lastNotificationId.value =
-                newLastId
-
-
-            localStorage.setItem(
-                'last_notification_id',
-                String(newLastId)
+            addNotification(
+                device,
+                'IP o‘zgardi',
+                'IP_CHANGED'
             )
 
         }
@@ -528,23 +579,24 @@ const loadNotifications = async () => {
 
         /*
         |--------------------------------------------------------------------------
-        | Table yangilanadi
+        | MAC o'zgardi
         |--------------------------------------------------------------------------
         */
 
-        await loadDevices(
-            pagination.value.current_page || 1,
-            false
-        )
+        if (
+            oldDevice.mac_address !==
+            device.mac_address
+        ) {
 
-    } catch (error) {
+            addNotification(
+                device,
+                'MAC o‘zgardi',
+                'MAC_CHANGED'
+            )
 
-        console.error(
-            'Notification load error:',
-            error
-        )
+        }
 
-    }
+    })
 
 }
 
@@ -556,55 +608,36 @@ const loadNotifications = async () => {
 */
 
 const addNotification = (
-    log
+    device,
+    title,
+    eventType
 ) => {
 
-    const device =
-        log.device || {}
-
+    /*
+    | Notification.
+    */
 
     const notification = {
 
         id:
             ++notificationId,
 
-        logId:
-            log.id,
-
         deviceId:
-            log.device_id,
+            device.id,
 
-        eventType:
-            log.event_type,
+        title,
 
-        title:
-            eventTitle(
-                log.event_type
-            ),
-
-        deviceName:
-            device.name ||
-            'Noma\'lum qurilma',
+        eventType,
 
         message:
-            log.message ||
-            eventTitle(
-                log.event_type
-            ),
-
-        time:
-            log.created_at
-                ? new Date(
-                    log.created_at
-                ).toLocaleTimeString()
-                : ''
+            `${device.name || 'Noma\'lum qurilma'} (${device.ip_address})`
 
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | Notificationni qo'shamiz
+    | Notification list
     |--------------------------------------------------------------------------
     */
 
@@ -615,23 +648,41 @@ const addNotification = (
 
     /*
     |--------------------------------------------------------------------------
-    | Tableda qurilmani belgilaymiz
+    | Device highlight
     |--------------------------------------------------------------------------
+    |
+    | Bir device uchun bir nechta notification bo'lishi mumkin.
+    |
     */
 
     changedDevices.value = {
 
         ...changedDevices.value,
 
-        [notification.deviceId]:
-            true
+        [device.id]: {
+
+            id:
+                device.id,
+
+            title,
+
+            eventType,
+
+            deviceName:
+                device.name ||
+                'Noma\'lum qurilma',
+
+            ip:
+                device.ip_address
+
+        }
 
     }
 
 
     /*
     |--------------------------------------------------------------------------
-    | Ovoz
+    | Sound
     |--------------------------------------------------------------------------
     */
 
@@ -642,182 +693,89 @@ const addNotification = (
 
 /*
 |--------------------------------------------------------------------------
-| Event title
-|--------------------------------------------------------------------------
-*/
-
-const eventTitle = (
-    event
-) => {
-
-    const events = {
-
-        NEW_DEVICE:
-            'Yangi qurilma',
-
-        DEVICE_ONLINE:
-            'Qurilma online bo‘ldi',
-
-        DEVICE_OFFLINE:
-            'Qurilma offline bo‘ldi',
-
-        IP_CHANGED:
-            'IP manzil o‘zgardi',
-
-        MAC_CHANGED:
-            'MAC manzil o‘zgardi'
-
-    }
-
-
-    return (
-        events[event] ||
-        event
-    )
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Notification icon
-|--------------------------------------------------------------------------
-*/
-
-const notificationIcon = (
-    event
-) => {
-
-    const icons = {
-
-        NEW_DEVICE:
-            '🆕',
-
-        DEVICE_ONLINE:
-            '🟢',
-
-        DEVICE_OFFLINE:
-            '🔴',
-
-        IP_CHANGED:
-            '🔵',
-
-        MAC_CHANGED:
-            '🟣'
-
-    }
-
-
-    return (
-        icons[event] ||
-        '⚠️'
-    )
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Notification border
-|--------------------------------------------------------------------------
-*/
-
-const notificationBorder = (
-    event
-) => {
-
-    const borders = {
-
-        NEW_DEVICE:
-            'border-green-500',
-
-        DEVICE_ONLINE:
-            'border-green-500',
-
-        DEVICE_OFFLINE:
-            'border-red-500',
-
-        IP_CHANGED:
-            'border-blue-500',
-
-        MAC_CHANGED:
-            'border-purple-500'
-
-    }
-
-
-    return (
-        borders[event] ||
-        'border-yellow-500'
-    )
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Notificationni ochish
+| Remove notification
 |--------------------------------------------------------------------------
 |
-| Faqat BOSILGAN QURILMANING notificationlari o'chadi.
+| Faqat BOSILGAN notification o'chadi.
 |
 */
 
-const openNotification = (
-    notification
+const removeNotification = (
+    id
 ) => {
 
-    const deviceId =
-        notification.deviceId
+    const notification =
+        notifications.value.find(
+            item =>
+                item.id === id
+        )
+
+
+    if (!notification) {
+
+        return
+
+    }
 
 
     /*
     |--------------------------------------------------------------------------
-    | Shu qurilmaga tegishli notificationlarni o'chiramiz
+    | Faqat shu notification.
     |--------------------------------------------------------------------------
     */
 
     notifications.value =
         notifications.value.filter(
             item =>
-                item.deviceId !== deviceId
+                item.id !== id
         )
 
 
     /*
     |--------------------------------------------------------------------------
-    | Tabledagi belgisini olib tashlaymiz
+    | Shu device uchun boshqa notification bormi?
     |--------------------------------------------------------------------------
     */
 
-    const updated = {
-        ...changedDevices.value
-    }
-
-
-    delete updated[deviceId]
-
-
-    changedDevices.value =
-        updated
+    const deviceStillHasNotification =
+        notifications.value.some(
+            item =>
+                item.deviceId ===
+                notification.deviceId
+        )
 
 
     /*
     |--------------------------------------------------------------------------
-    | Device detail
+    | Agar qolmagan bo'lsa table highlightni o'chiramiz.
     |--------------------------------------------------------------------------
     */
 
-    router.push(
-        `/devices/${deviceId}`
-    )
+    if (
+        !deviceStillHasNotification
+    ) {
+
+        const updated = {
+            ...changedDevices.value
+        }
+
+
+        delete updated[
+            notification.deviceId
+        ]
+
+
+        changedDevices.value =
+            updated
+
+    }
 
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| Table device click
+| Open device
 |--------------------------------------------------------------------------
 */
 
@@ -826,9 +784,10 @@ const goDevice = (
 ) => {
 
     /*
-    |--------------------------------------------------------------------------
-    | Shu device notificationlarini o'chiramiz
-    |--------------------------------------------------------------------------
+    | Muhim:
+    |
+    | Qurilmaga kirganda FAQAT shu qurilmaning
+    | notificationlarini o'chiramiz.
     */
 
     notifications.value =
@@ -839,9 +798,7 @@ const goDevice = (
 
 
     /*
-    |--------------------------------------------------------------------------
-    | Table belgisini olib tashlash
-    |--------------------------------------------------------------------------
+    | Table highlight ham faqat shu device uchun.
     */
 
     const updated = {
@@ -857,13 +814,11 @@ const goDevice = (
 
 
     /*
-    |--------------------------------------------------------------------------
-    | Device detail
-    |--------------------------------------------------------------------------
+    | Device detail.
     */
 
     router.push(
-        `/devices/${id}`
+        '/devices/' + id
     )
 
 }
@@ -881,14 +836,17 @@ const changePage = (
 
     if (
         page < 1 ||
-        page >
-        pagination.value.last_page
+        page > pagination.value.last_page
     ) {
 
         return
 
     }
 
+
+    /*
+    | Pagination notification yaratmaydi.
+    */
 
     loadDevices(
         page,
@@ -916,6 +874,10 @@ watch(
         searchTimer =
             setTimeout(() => {
 
+                /*
+                | Search notification yaratmaydi.
+                */
+
                 loadDevices(
                     1,
                     false
@@ -929,16 +891,30 @@ watch(
 
 /*
 |--------------------------------------------------------------------------
-| Device auto refresh
+| Auto refresh
 |--------------------------------------------------------------------------
 */
 
-const startDeviceRefresh = () => {
+const startAutoRefresh = () => {
 
-    clearInterval(
-        deviceTimer
-    )
+    /*
+    | Eski timer.
+    */
 
+    if (refreshTimer) {
+
+        clearInterval(
+            refreshTimer
+        )
+
+        refreshTimer = null
+
+    }
+
+
+    /*
+    | Auto refresh OFF.
+    */
 
     if (
         !settings.value.auto_refresh
@@ -949,24 +925,25 @@ const startDeviceRefresh = () => {
     }
 
 
+    /*
+    | Interval.
+    */
+
     const seconds =
         Math.max(
             Number(
-                settings.value.scan_interval ||
-                60
+                settings.value.scan_interval || 60
             ),
             1
         )
 
 
-    deviceTimer =
+    refreshTimer =
         setInterval(() => {
 
             loadDevices(
-                pagination.value.current_page ||
-                1,
-
-                false
+                pagination.value.current_page || 1,
+                true
             )
 
         }, seconds * 1000)
@@ -976,33 +953,7 @@ const startDeviceRefresh = () => {
 
 /*
 |--------------------------------------------------------------------------
-| Notification refresh
-|--------------------------------------------------------------------------
-|
-| Notification uchun alohida timer.
-|
-*/
-
-const startNotificationRefresh = () => {
-
-    clearInterval(
-        notificationTimer
-    )
-
-
-    notificationTimer =
-        setInterval(() => {
-
-            loadNotifications()
-
-        }, 3000)
-
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| Settings changed
+| Settings updated
 |--------------------------------------------------------------------------
 */
 
@@ -1013,7 +964,7 @@ const handleSettingsUpdated =
 
         await loadSettings()
 
-        startDeviceRefresh()
+        startAutoRefresh()
 
     }
 
@@ -1040,8 +991,11 @@ onMounted(
 
         /*
         |--------------------------------------------------------------------------
-        | Chrome audio unlock
+        | Chrome audio permission
         |--------------------------------------------------------------------------
+        |
+        | Birinchi foydalanuvchi interactionida audio unlock qilinadi.
+        |
         */
 
         document.addEventListener(
@@ -1067,9 +1021,15 @@ onMounted(
 
         /*
         |--------------------------------------------------------------------------
-        | Devices
+        | First load
         |--------------------------------------------------------------------------
+        |
+        | Bu yuklanish notification chiqarmaydi.
+        |
         */
+
+        firstLoad.value = true
+
 
         await loadDevices(
             1,
@@ -1079,70 +1039,11 @@ onMounted(
 
         /*
         |--------------------------------------------------------------------------
-        | Eski notification ID ni aniqlaymiz
+        | Auto refresh
         |--------------------------------------------------------------------------
         */
 
-        if (
-            lastNotificationId.value === 0
-        ) {
-
-            /*
-            | Birinchi kirishda eski loglarni
-            | notification qilmaymiz.
-            */
-
-            const response =
-                await api.get(
-                    '/devices/notifications',
-                    {
-                        params: {
-                            after_id: 0
-                        }
-                    }
-                )
-
-
-            const logs =
-                response.data.logs || []
-
-
-            if (
-                logs.length > 0
-            ) {
-
-                const maxId =
-                    Math.max(
-                        ...logs.map(
-                            log =>
-                                Number(log.id)
-                        )
-                    )
-
-
-                lastNotificationId.value =
-                    maxId
-
-
-                localStorage.setItem(
-                    'last_notification_id',
-                    String(maxId)
-                )
-
-            }
-
-        }
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Timers
-        |--------------------------------------------------------------------------
-        */
-
-        startDeviceRefresh()
-
-        startNotificationRefresh()
+        startAutoRefresh()
 
     }
 )
@@ -1150,36 +1051,57 @@ onMounted(
 
 /*
 |--------------------------------------------------------------------------
-| Cleanup
+| Unmounted
 |--------------------------------------------------------------------------
 */
 
-onUnmounted(() => {
+onUnmounted(
+    () => {
 
-    clearInterval(
-        deviceTimer
-    )
+        /*
+        | Timer.
+        */
 
-    clearInterval(
-        notificationTimer
-    )
+        if (refreshTimer) {
 
-    clearTimeout(
-        searchTimer
-    )
+            clearInterval(
+                refreshTimer
+            )
 
+            refreshTimer = null
 
-    document.removeEventListener(
-        'pointerdown',
-        unlockAudio
-    )
+        }
 
 
-    window.removeEventListener(
-        'app-settings-updated',
-        handleSettingsUpdated
-    )
+        /*
+        | Search timer.
+        */
 
-})
+        clearTimeout(
+            searchTimer
+        )
+
+
+        /*
+        | Audio listener.
+        */
+
+        document.removeEventListener(
+            'pointerdown',
+            unlockAudio
+        )
+
+
+        /*
+        | Settings listener.
+        */
+
+        window.removeEventListener(
+            'app-settings-updated',
+            handleSettingsUpdated
+        )
+
+    }
+)
 
 </script>
