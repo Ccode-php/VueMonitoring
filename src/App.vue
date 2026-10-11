@@ -7,15 +7,11 @@
 
     <!-- MAIN APPLICATION -->
 
-    <div
-        v-else
-        class="min-h-screen bg-slate-100"
-    >
+    <div v-else class="min-h-screen bg-slate-100">
 
         <!-- SIDEBAR -->
 
-        <aside
-            class="fixed
+        <aside class="fixed
                    left-0
                    top-0
                    bottom-0
@@ -25,16 +21,13 @@
                    flex
                    flex-col
                    shadow-xl
-                   z-50"
-        >
+                   z-50">
 
             <!-- LOGO -->
 
-            <div
-                class="p-6
+            <div class="p-6
                        border-b
-                       border-slate-800"
-            >
+                       border-slate-800">
 
                 <h1 class="text-2xl font-bold">
 
@@ -47,53 +40,31 @@
 
             <!-- MENU -->
 
-            <nav
-                class="flex-1
+            <nav class="flex-1
                        p-4
-                       space-y-2"
-            >
+                       space-y-2">
 
-                <RouterLink
-                    to="/"
-                    class="menu"
-                    active-class="menu-active"
-                >
+                <RouterLink to="/" class="menu" active-class="menu-active">
                     📊 Dashboard
                 </RouterLink>
 
 
-                <RouterLink
-                    to="/devices"
-                    class="menu"
-                    active-class="menu-active"
-                >
+                <RouterLink to="/devices" class="menu" active-class="menu-active">
                     💻 Qurilmalar
                 </RouterLink>
 
 
-                <RouterLink
-                    to="/scan"
-                    class="menu"
-                    active-class="menu-active"
-                >
+                <RouterLink to="/scan" class="menu" active-class="menu-active">
                     🌐 Scan
                 </RouterLink>
 
 
-                <RouterLink
-                    to="/topology"
-                    class="menu"
-                    active-class="menu-active"
-                >
+                <RouterLink to="/topology" class="menu" active-class="menu-active">
                     🔀 Topology
                 </RouterLink>
 
 
-                <RouterLink
-                    to="/settings"
-                    class="menu"
-                    active-class="menu-active"
-                >
+                <RouterLink to="/settings" class="menu" active-class="menu-active">
                     ⚙️ Settings
                 </RouterLink>
 
@@ -104,13 +75,12 @@
 
         <!-- RIGHT SIDE -->
 
-        <div class="ml-64 min-h-screen flex flex-col">
+        <div class="ml-64 min-h-screen flex flex-col min-w-0">
 
 
             <!-- HEADER -->
 
-            <header
-                class="bg-white
+            <header class="bg-white
                        h-16
                        shadow
                        flex
@@ -119,32 +89,25 @@
                        px-8
                        sticky
                        top-0
-                       z-40"
-            >
+                       z-40">
 
-                <h2
-                    class="text-2xl
+                <h2 class="text-2xl
                            font-bold
-                           text-slate-800"
-                >
+                           text-slate-800">
 
                     {{ pageTitle }}
 
                 </h2>
 
 
-                <div
-                    class="flex
+                <div class="flex
                            items-center
-                           gap-5"
-                >
+                           gap-5">
 
                     <!-- CLOCK -->
 
-                    <div
-                        class="text-sm
-                               text-slate-500"
-                    >
+                    <div class="text-sm
+                               text-slate-500">
 
                         {{ now }}
 
@@ -153,17 +116,13 @@
 
                     <!-- USER -->
 
-                    <div
-                        v-if="user"
-                        class="flex
+                    <div v-if="user" class="flex
                                items-center
                                gap-3
                                border-l
-                               pl-5"
-                    >
+                               pl-5">
 
-                        <div
-                            class="w-9
+                        <div class="w-9
                                    h-9
                                    rounded-full
                                    bg-blue-600
@@ -171,8 +130,7 @@
                                    flex
                                    items-center
                                    justify-center
-                                   font-bold"
-                        >
+                                   font-bold">
 
                             {{ user.name?.charAt(0).toUpperCase() }}
 
@@ -181,19 +139,15 @@
 
                         <div class="hidden md:block">
 
-                            <div
-                                class="font-semibold
-                                       text-slate-800"
-                            >
+                            <div class="font-semibold
+                                       text-slate-800">
 
                                 {{ user.name }}
 
                             </div>
 
-                            <div
-                                class="text-xs
-                                       text-slate-500"
-                            >
+                            <div class="text-xs
+                                       text-slate-500">
 
                                 {{ user.email }}
 
@@ -202,16 +156,13 @@
                         </div>
 
 
-                        <button
-                            @click="logout"
-                            class="ml-2
+                        <button @click="logout" class="ml-2
                                    px-3
                                    py-2
                                    text-sm
                                    rounded-lg
                                    text-red-600
-                                   hover:bg-red-50"
-                        >
+                                   hover:bg-red-50">
 
                             Logout
 
@@ -226,13 +177,11 @@
 
             <!-- PAGE -->
 
-            <main
-                class="flex-1
-                       p-8"
-            >
-
+            <main class="flex-1
+           min-w-0
+           w-full
+           p-8">
                 <RouterView />
-
             </main>
 
         </div>
@@ -404,7 +353,6 @@ onUnmounted(() => {
 
 
 <style scoped>
-
 .menu {
 
     display: block;
@@ -430,5 +378,4 @@ onUnmounted(() => {
     color: white;
 
 }
-
 </style>

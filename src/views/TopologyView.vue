@@ -1,20 +1,51 @@
 <template>
 
-    <div>
+    <div class="topology-page">
 
-        <h1 class="text-3xl font-bold mb-6">
-            Network Topology
-        </h1>
+        <div class="topology-content">
 
-        <NetworkTopology />
+            <NetworkTopology />
+
+        </div>
 
     </div>
 
 </template>
 
+
 <script setup>
 
 import NetworkTopology
-    from '../components/NetworkTopology.vue'
+    from '../components/Network/NetworkTopology.vue'
 
 </script>
+
+
+<style scoped>
+
+.topology-page {
+
+    width: 100%;
+
+    min-width: 0;
+
+    max-width: none;
+
+    box-sizing: border-box;
+
+}
+
+
+.topology-content {
+
+    width: 100%;
+
+    min-width: 0;
+
+    max-width: none;
+
+    box-sizing: border-box;
+
+}
+
+</style>
