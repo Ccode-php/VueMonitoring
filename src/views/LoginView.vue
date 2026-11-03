@@ -163,13 +163,6 @@ const login = async () => {
             }
         )
 
-
-        console.log(
-            'LOGIN RESPONSE:',
-            res.data
-        )
-
-
         localStorage.setItem(
             'token',
             res.data.token

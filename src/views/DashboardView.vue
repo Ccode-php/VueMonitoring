@@ -372,147 +372,35 @@
 
 <script setup>
 
-import {
-    ref,
-    onMounted,
-    onUnmounted
-} from 'vue'
-
-import {
-    useSettings
-} from '../composables/useSettings'
+import { ref } from 'vue'
 
 import api from '../api/axios'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
+import { formatDate } from '../utils/format'
 
-import StatCard
-    from '../components/dashboard/StatCard.vue'
-
-import DashboardChart
-    from '../components/dashboard/DashboardChart.vue'
-
+import StatCard from '../components/dashboard/StatCard.vue'
+import DashboardChart from '../components/dashboard/DashboardChart.vue'
 
 const latestDevices = ref([])
-
 const stats = ref({})
-
 const loading = ref(false)
 
-let timer = null
-
-const {
-    settings,
-    loadSettings,
-    loadFromStorage
-} = useSettings()
-
-
 const loadData = async () => {
-
     loading.value = true
 
     try {
+        const res = await api.get('/dashboard')
 
-        const res =
-            await api.get('/dashboard')
-
-        stats.value =
-            res.data.stats
-
-        latestDevices.value =
-            res.data.latestDevices
-
+        stats.value = res.data.stats
+        latestDevices.value = res.data.latestDevices
     } catch (error) {
-
-        console.error(
-            'Dashboard error:',
-            error
-        )
-
+        console.error('Dashboard error:', error)
     } finally {
-
         loading.value = false
-
     }
-
 }
 
-
-const formatDate = (date) => {
-
-    if (!date) {
-
-        return '-'
-
-    }
-
-    return new Date(date).toLocaleString()
-
-}
-
-const startAutoRefresh = () => {
-
-clearInterval(timer)
-
-timer = null
-
-if (
-    !settings.value.auto_refresh
-) {
-
-    return
-
-}
-
-const interval =
-    Math.max(
-        Number(settings.value.scan_interval || 60),
-        1
-    ) * 1000
-
-timer = setInterval(
-    loadData,
-    interval
-)
-
-}
-
-const handleSettingsUpdated = async () => {
-
-loadFromStorage()
-
-await loadSettings()
-
-startAutoRefresh()
-
-}
-
-onMounted(async () => {
-
-loadFromStorage()
-
-await loadSettings()
-
-await loadData()
-
-startAutoRefresh()
-
-window.addEventListener(
-    'app-settings-updated',
-    handleSettingsUpdated
-)
-
-})
-
-
-onUnmounted(() => {
-
-clearInterval(timer)
-
-window.removeEventListener(
-    'app-settings-updated',
-    handleSettingsUpdated
-)
-
-})
+// Davriy yangilash va yangi hodisa kelganda yangilash
+useAutoRefresh(loadData)
 
 </script>

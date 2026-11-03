@@ -1,0 +1,27 @@
+/* ==========================================================
+   TRANSITIONS
+   ========================================================== */
+
+/* Notification.vue  ->  <Transition name="slide"> */
+.slide-enter-active,
+.slide-leave-active {
+    transition: .3s;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+/* NetworkTopology.vue  ->  <transition name="details"> */
+.details-enter-active,
+.details-leave-active {
+    transition: all .2s ease;
+}
+
+.details-enter-from,
+.details-leave-to {
+    opacity: 0;
+    transform: translateX(20px);
+}

@@ -1,107 +1,34 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import DashboardView from '../views/DashboardView.vue'
+// Sahifalar kerak bo'lganda yuklanadi (chart.js va vue-flow boshlang'ich bundle'ga kirmaydi)
+const routes = [
+    { path: '/',            component: () => import('../views/DashboardView.vue'),    meta: { requiresAuth: true, title: 'Dashboard' } },
+    { path: '/devices',     component: () => import('../views/DevicesView.vue'),      meta: { requiresAuth: true, title: 'Qurilmalar' } },
+    { path: '/devices/:id', component: () => import('../views/DeviceDetailView.vue'), meta: { requiresAuth: true, title: 'Qurilma' } },
+    { path: '/scan',        component: () => import('../views/ScanView.vue'),         meta: { requiresAuth: true, title: 'Tarmoqlarni scanner qilish' } },
+    { path: '/topology',    component: () => import('../views/TopologyView.vue'),     meta: { requiresAuth: true, title: 'Topology' } },
+    { path: '/settings',    component: () => import('../views/SettingsView.vue'),     meta: { requiresAuth: true, title: 'Settings' } },
+    { path: '/login',       name: 'login',    component: () => import('../views/LoginView.vue'), meta: { title: 'Login' } },
 
-import DevicesView from '../views/DevicesView.vue'
-
-import DeviceDetailView from '../views/DeviceDetailView.vue'
-
-import ScanView from '../views/ScanView.vue'
-
-import TopologyView from '../views/TopologyView.vue'
-
-import SettingsView from '../views/SettingsView.vue'
-
-import LoginView from '../views/LoginView.vue'
-
+    // Noma'lum manzil -> bosh sahifa
+    { path: '/:pathMatch(.*)*', redirect: '/' },
+]
 
 const router = createRouter({
-
     history: createWebHistory(),
-
-    routes: [
-
-        {
-            path: '/',
-            component: DashboardView,
-            meta: {
-                requiresAuth: true
-            }
-        },
-
-        {
-            path: '/devices',
-            component: DevicesView,
-            meta: {
-                requiresAuth: true
-            }
-        },
-
-        {
-            path: '/devices/:id',
-            component: DeviceDetailView,
-            meta: {
-                requiresAuth: true
-            }
-        },
-
-        {
-            path: '/scan',
-            component: ScanView,
-            meta: {
-                requiresAuth: true
-            }
-        },
-
-        {
-            path: '/topology',
-            component: TopologyView,
-            meta: {
-                requiresAuth: true
-            }
-        },
-
-        {
-            path:'/settings',
-            component: SettingsView,
-            meta: {
-                requiresAuth: true
-            }
-        },
-        
-        {
-            path: '/login',
-            name: 'login',
-            component: LoginView
-        },
-
-        
-    ],
+    routes,
 })
 
 router.beforeEach((to) => {
+    const token = localStorage.getItem('token')
 
-    const token =
-        localStorage.getItem('token')
-
-    if (
-        to.meta.requiresAuth &&
-        !token
-    ) {
-
+    if (to.meta.requiresAuth && !token) {
         return '/login'
-
     }
 
-    if (
-        to.path === '/login' &&
-        token
-    ) {
-
+    if (to.path === '/login' && token) {
         return '/'
-
     }
-
 })
 
 export default router

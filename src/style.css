@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+/* Barcha qo'lda yozilgan CSS shu yerdan ulanadi */
+@import "./assets/css/layout.css";
+@import "./assets/css/transitions.css";
+@import "./assets/css/topology.css";

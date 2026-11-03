@@ -5,7 +5,8 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install
+# npm install o'rniga npm ci: package-lock.json bo'yicha aniq versiyalar
+RUN npm ci
 
 COPY . .
 

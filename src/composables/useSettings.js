@@ -1,140 +1,72 @@
 import { ref } from 'vue'
 import api from '../api/axios'
 
-const settings = ref({
+const STORAGE_KEY = 'settings'
+
+const defaults = () => ({
     scan_interval: 60,
+    ui_refresh_interval: 10,
     offline_timeout: 120,
     notification_sound: true,
     auto_refresh: true,
     snmp_community: 'public',
     snmp_version: 'v2c',
     snmp_timeout: 5,
-    snmp_retries: 1
+    snmp_retries: 1,
 })
 
-const normalizeBoolean = (value) => {
+const settings = ref(defaults())
 
-    return (
-        value === true ||
-        value === 'true' ||
-        value === 1 ||
-        value === '1'
-    )
+const toBool = (value) =>
+    value === true || value === 'true' || value === 1 || value === '1'
 
+// Serverdan kelgan (string) qiymatlarni to'g'ri turga o'tkazadi
+export const normalizeSettings = (data = {}) => {
+    const d = defaults()
+
+    return {
+        scan_interval: Number(data.scan_interval ?? d.scan_interval),
+        ui_refresh_interval: Number(data.ui_refresh_interval ?? d.ui_refresh_interval),
+        offline_timeout: Number(data.offline_timeout ?? d.offline_timeout),
+        notification_sound: data.notification_sound === undefined ? d.notification_sound : toBool(data.notification_sound),
+        auto_refresh: data.auto_refresh === undefined ? d.auto_refresh : toBool(data.auto_refresh),
+        snmp_community: data.snmp_community ?? d.snmp_community,
+        snmp_version: data.snmp_version ?? d.snmp_version,
+        snmp_timeout: Number(data.snmp_timeout ?? d.snmp_timeout),
+        snmp_retries: Number(data.snmp_retries ?? d.snmp_retries),
+    }
 }
 
 const loadSettings = async () => {
-
     try {
-
         const res = await api.get('/settings')
 
-        const data = res.data
+        settings.value = normalizeSettings(res.data)
 
-        settings.value = {
-
-            scan_interval:
-                Number(data.scan_interval ?? 60),
-
-            offline_timeout:
-                Number(data.offline_timeout ?? 120),
-
-            notification_sound:
-                normalizeBoolean(
-                    data.notification_sound
-                ),
-
-            auto_refresh:
-                normalizeBoolean(
-                    data.auto_refresh
-                ),
-
-            snmp_community:
-                data.snmp_community ?? 'public',
-
-            snmp_version:
-                data.snmp_version ?? 'v2c',
-
-            snmp_timeout:
-                Number(data.snmp_timeout ?? 5),
-
-            snmp_retries:
-                Number(data.snmp_retries ?? 1)
-
-        }
-
-        /*
-        |--------------------------------------------------------------
-        | Boshqa Vue sahifalariga ham yangi settingni yetkazamiz
-        |--------------------------------------------------------------
-        */
-
-        localStorage.setItem(
-            'settings',
-            JSON.stringify(settings.value)
-        )
-
-        return settings.value
-
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(settings.value))
+        } catch { /* localStorage yo'q bo'lishi mumkin */ }
     } catch (error) {
-
-        console.error(
-            'Settings load error:',
-            error
-        )
-
-        return settings.value
-
-    }
-
-}
-
-
-const loadFromStorage = () => {
-
-    const saved =
-        localStorage.getItem('settings')
-
-    if (!saved) {
-
-        return settings.value
-
-    }
-
-    try {
-
-        settings.value = {
-
-            ...settings.value,
-
-            ...JSON.parse(saved)
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            'Settings storage error:',
-            error
-        )
-
+        console.error('Settings load error:', error)
     }
 
     return settings.value
-
 }
 
+const loadFromStorage = () => {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY)
 
-export function useSettings() {
-
-    return {
-
-        settings,
-
-        loadSettings,
-
-        loadFromStorage
-
+        if (saved) {
+            settings.value = { ...settings.value, ...JSON.parse(saved) }
+        }
+    } catch (error) {
+        console.error('Settings storage error:', error)
     }
 
+    return settings.value
+}
+
+export function useSettings() {
+    return { settings, loadSettings, loadFromStorage }
 }

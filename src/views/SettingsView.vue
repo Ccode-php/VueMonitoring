@@ -2,70 +2,37 @@
 
     <div>
 
-        <h1 class="text-3xl
-    font-bold
-    mb-8">
+        <h1 class="text-3xl font-bold mb-8">Settings</h1>
 
-            Settings
-
-        </h1>
-
-        <div class="grid
-    lg:grid-cols-2
-    gap-6">
+        <div class="grid lg:grid-cols-2 gap-6">
 
             <SettingsCard title="General">
 
                 <div class="space-y-5">
 
                     <div>
-
-                        <label class="font-medium">
-
-                            Scan interval (sec)
-
-                        </label>
-
-                        <input type="number" v-model="form.scan_interval" class="border
-                        rounded-lg
-                        w-full
-                        mt-2
-                        p-2">
-
+                        <label class="font-medium">Scan interval (sec) — scanner qancha vaqtda tarmoqni tekshiradi</label>
+                        <input type="number" min="5" v-model.number="form.scan_interval" class="border rounded-lg w-full mt-2 p-2">
                     </div>
 
                     <div>
-
-                        <label class="font-medium">
-
-                            Offline timeout (sec)
-
-                        </label>
-
-                        <input type="number" v-model="form.offline_timeout" class="border
-                        rounded-lg
-                        w-full
-                        mt-2
-                        p-2">
-
+                        <label class="font-medium">Sahifa yangilanish intervali (sec)</label>
+                        <input type="number" min="2" v-model.number="form.ui_refresh_interval" class="border rounded-lg w-full mt-2 p-2">
                     </div>
 
-                    <div class="flex
-                justify-between">
+                    <div>
+                        <label class="font-medium">Offline timeout (sec) — scan intervalidan kamida 2 baravar katta</label>
+                        <input type="number" min="10" v-model.number="form.offline_timeout" class="border rounded-lg w-full mt-2 p-2">
+                    </div>
 
+                    <div class="flex justify-between">
                         Notification sound
-
                         <ToggleSwitch v-model="form.notification_sound" />
-
                     </div>
 
-                    <div class="flex
-                justify-between">
-
+                    <div class="flex justify-between">
                         Auto refresh
-
                         <ToggleSwitch v-model="form.auto_refresh" />
-
                     </div>
 
                 </div>
@@ -77,87 +44,26 @@
                 <div class="space-y-5">
 
                     <div>
-
-                        <label>
-
-                            Community
-
-                        </label>
-
-                        <input v-model="form.snmp_community" class="border
-                        rounded-lg
-                        w-full
-                        mt-2
-                        p-2">
-
+                        <label>Community</label>
+                        <input v-model="form.snmp_community" class="border rounded-lg w-full mt-2 p-2">
                     </div>
 
                     <div>
-
-                        <label>
-
-                            Version
-
-                        </label>
-
-                        <select v-model="form.snmp_version" class="border
-                        rounded-lg
-                        w-full
-                        mt-2
-                        p-2">
-
-                            <option>
-
-                                v1
-
-                            </option>
-
-                            <option>
-
-                                v2c
-
-                            </option>
-
-                            <option>
-
-                                v3
-
-                            </option>
-
+                        <label>Version</label>
+                        <select v-model="form.snmp_version" class="border rounded-lg w-full mt-2 p-2">
+                            <option>v1</option>
+                            <option>v2c</option>
                         </select>
-
                     </div>
 
                     <div>
-
-                        <label>
-
-                            Timeout
-
-                        </label>
-
-                        <input type="number" v-model="form.snmp_timeout" class="border
-                        rounded-lg
-                        w-full
-                        mt-2
-                        p-2">
-
+                        <label>Timeout (sec)</label>
+                        <input type="number" min="1" v-model.number="form.snmp_timeout" class="border rounded-lg w-full mt-2 p-2">
                     </div>
 
                     <div>
-
-                        <label>
-
-                            Retries
-
-                        </label>
-
-                        <input type="number" v-model="form.snmp_retries" class="border
-                        rounded-lg
-                        w-full
-                        mt-2
-                        p-2">
-
+                        <label>Retries</label>
+                        <input type="number" min="0" v-model.number="form.snmp_retries" class="border rounded-lg w-full mt-2 p-2">
                     </div>
 
                 </div>
@@ -166,26 +72,21 @@
 
         </div>
 
+        <div v-if="error" class="mt-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+            {{ error }}
+        </div>
+
         <div class="mt-8 flex items-center gap-4">
 
-            <button class="bg-blue-600
-    hover:bg-blue-700
-    disabled:bg-gray-400
-    text-white
-    px-6
-    py-3
-    rounded-xl
-    transition" :disabled="saving" @click="save">
-
+            <button
+                class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-xl transition"
+                :disabled="saving"
+                @click="save"
+            >
                 {{ saving ? 'Saving...' : 'Save Settings' }}
-
             </button>
 
-            <span v-if="success" class="text-green-600 font-medium">
-
-                ✓ Settings saved
-
-            </span>
+            <span v-if="success" class="text-green-600 font-medium">✓ Settings saved</span>
 
         </div>
 
@@ -195,170 +96,54 @@
 
 <script setup>
 
-import {
-    ref,
-    onMounted
-} from 'vue'
+import { ref, onMounted } from 'vue'
 
 import api from '../api/axios'
+import { useSettings } from '../composables/useSettings'
 
-import SettingsCard
-    from '../components/settings/SettingsCard.vue'
+import SettingsCard from '../components/settings/SettingsCard.vue'
+import ToggleSwitch from '../components/settings/ToggleSwitch.vue'
 
-import ToggleSwitch
-    from '../components/settings/ToggleSwitch.vue'
+const { settings, loadSettings } = useSettings()
 
-
-const form = ref({
-
-    scan_interval: 60,
-
-    offline_timeout: 120,
-
-    notification_sound: true,
-
-    auto_refresh: true,
-
-    snmp_community: 'public',
-
-    snmp_version: 'v2c',
-
-    snmp_timeout: 5,
-
-    snmp_retries: 1
-
-})
-
-
-const loading = ref(false)
+const form = ref({ ...settings.value })
 
 const saving = ref(false)
-
 const success = ref(false)
+const error = ref('')
 
-const load = async () => {
-
-    loading.value = true
-
-    try {
-
-        const res =
-            await api.get('/settings')
-
-        const data = res.data
-
-        form.value = {
-
-            scan_interval:
-                Number(data.scan_interval ?? 60),
-
-            offline_timeout:
-                Number(data.offline_timeout ?? 120),
-
-            notification_sound:
-                data.notification_sound === true ||
-                data.notification_sound === 'true' ||
-                data.notification_sound === 1 ||
-                data.notification_sound === '1',
-
-            auto_refresh:
-                data.auto_refresh === true ||
-                data.auto_refresh === 'true' ||
-                data.auto_refresh === 1 ||
-                data.auto_refresh === '1',
-
-            snmp_community:
-                data.snmp_community ?? 'public',
-
-            snmp_version:
-                data.snmp_version ?? 'v2c',
-
-            snmp_timeout:
-                Number(data.snmp_timeout ?? 5),
-
-            snmp_retries:
-                Number(data.snmp_retries ?? 1)
-
-        }
-
-    } catch (error) {
-
-        console.error(
-            'Settings load error:',
-            error
-        )
-
-    } finally {
-
-        loading.value = false
-
-    }
-
-}
-
+onMounted(async () => {
+    // Normalizatsiya useSettings ichida (oldin bu yerda nusxa kod bor edi)
+    form.value = { ...(await loadSettings()) }
+})
 
 const save = async () => {
+    saving.value = true
+    success.value = false
+    error.value = ''
 
-saving.value = true
+    try {
+        await api.post('/settings', form.value)
 
-success.value = false
+        // Umumiy sozlamalarni yangilab, boshqa sahifalarga xabar beramiz
+        await loadSettings()
 
-try {
+        window.dispatchEvent(new Event('app-settings-updated'))
 
-    await api.post(
-        '/settings',
-        form.value
-    )
+        success.value = true
 
-    /*
-    |----------------------------------------------------------
-    | Vue sahifalariga yangi settingni yetkazamiz
-    |----------------------------------------------------------
-    */
+        setTimeout(() => { success.value = false }, 3000)
+    } catch (err) {
+        console.error('Settings save error:', err)
 
-    localStorage.setItem(
-        'app_settings',
-        JSON.stringify(form.value)
-    )
+        const errors = err.response?.data?.errors
 
-    /*
-    |----------------------------------------------------------
-    | Boshqa tab/window bo‘lsa ham xabar beramiz
-    |----------------------------------------------------------
-    */
-
-    window.dispatchEvent(
-        new Event('app-settings-updated')
-    )
-
-    success.value = true
-
-    setTimeout(() => {
-
-        success.value = false
-
-    }, 3000)
-
-} catch (error) {
-
-    console.error(
-        'Settings save error:',
-        error
-    )
-
-} finally {
-
-    saving.value = false
-
+        error.value = errors
+            ? Object.values(errors).flat().join(' ')
+            : (err.response?.data?.message || 'Saqlashda xatolik')
+    } finally {
+        saving.value = false
+    }
 }
-
-}
-
-
-onMounted(() => {
-
-    load()
-
-})
 
 </script>

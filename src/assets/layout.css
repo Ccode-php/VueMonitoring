@@ -1,0 +1,19 @@
+/* ==========================================================
+   LAYOUT (App.vue sidebar menyusi)
+   ========================================================== */
+
+.menu {
+    display: block;
+    padding: 12px 15px;
+    border-radius: 10px;
+    transition: .2s;
+}
+
+.menu:hover {
+    background: rgb(51 65 85);
+}
+
+.menu-active {
+    background: rgb(59 130 246);
+    color: white;
+}
