@@ -11,9 +11,17 @@
                 <p class="topology-subtitle">Switches, devices and network connections</p>
             </div>
 
-            <div class="live-status">
-                <span class="live-dot"></span>
-                LIVE
+            <div class="header-actions">
+
+                <button class="reset-button" @click="resetLayout" title="Qo'lda surilgan joylarni tozalab, avtomatik tartibga qaytaradi">
+                    ⟳ Tartibga solish
+                </button>
+
+                <div class="live-status">
+                    <span class="live-dot"></span>
+                    LIVE
+                </div>
+
             </div>
 
         </div>
@@ -35,6 +43,7 @@
                     :nodes-draggable="true"
                     :nodes-connectable="false"
                     @node-click="handleNodeClick"
+                    @pane-click="selectedNode = null"
                     @node-drag-stop="handleDragStop"
                 >
                     <Background :gap="20" />
@@ -124,9 +133,9 @@
 
 <script setup>
 
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 
-import { VueFlow } from '@vue-flow/core'
+import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
 import { Controls } from '@vue-flow/controls'
@@ -136,6 +145,8 @@ import '@vue-flow/core/dist/theme-default.css'
 
 import api from '../../api/axios'
 import { useAutoRefresh } from '../../composables/useAutoRefresh'
+
+import { layoutTopology } from '../../utils/topologyLayout'
 
 import SwitchNode from './SwitchNode.vue'
 import DeviceNode from './DeviceNode.vue'
@@ -211,45 +222,55 @@ const loadTopology = async () => {
 |--------------------------------------------------------------------------
 */
 
-const addSwitchNode = (sw, x, y, result) => {
-    const switchId = `switch-${sw.id}`
+const createGraph = () => {
+    const layout = layoutTopology(topology.value)
+    const result = { nodes: [], edges: [] }
 
-    result.nodes.push({
-        id: switchId,
-        type: 'switchNode',
-        position: positions[switchId] || { x, y },
-        data: {
-            kind: 'switch',
-            id: sw.id,
-            hostname: sw.hostname || sw.ip || 'Switch',
-            ip: sw.ip || '',
-            mac: sw.mac || '',
-            status: sw.status || 'ONLINE',
-            portCount: (sw.ports || []).length,
-            childrenCount: (sw.children || []).length,
-        },
+    const isSelected = (kind, id) =>
+        !!selectedNode.value && selectedNode.value.kind === kind && selectedNode.value.id === id
+
+    layout.switches.forEach(({ sw, parent, x, y }) => {
+        const switchId = `switch-${sw.id}`
+
+        result.nodes.push({
+            id: switchId,
+            type: 'switchNode',
+            position: positions[switchId] || { x, y },
+            selected: isSelected('switch', sw.id),
+            data: {
+                kind: 'switch',
+                id: sw.id,
+                hostname: sw.hostname || sw.ip || 'Switch',
+                ip: sw.ip || '',
+                mac: sw.mac || '',
+                status: sw.status || 'ONLINE',
+                portCount: (sw.ports || []).length,
+                childrenCount: (sw.children || []).length,
+            },
+        })
+
+        if (parent) {
+            result.edges.push({
+                id: `switch-${parent.id}-${switchId}`,
+                source: `switch-${parent.id}`,
+                target: switchId,
+                type: 'smoothstep',
+                animated: true,
+                label: 'UPLINK',
+                style: { strokeWidth: 2 },
+            })
+        }
     })
 
-    // Switchga ulangan qurilmalar
-    const devices = []
-
-    ;(sw.ports || []).forEach((port) => {
-        ;(port.devices || []).forEach((device) => devices.push({ device, port }))
-    })
-
-    devices.forEach(({ device, port }, index) => {
+    layout.devices.forEach(({ device, port, sw, x, y }) => {
         const deviceId = `device-${device.id}`
         const portName = port.name || `Port ${port.index}`
-
-        const defaultPosition = {
-            x: x - 140 + (index % 3) * 190,
-            y: y + 170 + Math.floor(index / 3) * 110,
-        }
 
         result.nodes.push({
             id: deviceId,
             type: 'deviceNode',
-            position: positions[deviceId] || defaultPosition,
+            position: positions[deviceId] || { x, y },
+            selected: isSelected('device', device.id),
             data: {
                 kind: 'device',
                 id: device.id,
@@ -261,50 +282,14 @@ const addSwitchNode = (sw, x, y, result) => {
             },
         })
 
+        // Port nomi qurilma tagida yozilgan, chiziqda takrorlanmaydi (yozuvlar to'qnashmasligi uchun)
         result.edges.push({
-            id: `${switchId}-${deviceId}`,
-            source: switchId,
+            id: `switch-${sw.id}-${deviceId}`,
+            source: `switch-${sw.id}`,
             target: deviceId,
             type: 'smoothstep',
-            label: portName,
             style: { strokeWidth: 1.5 },
         })
-    })
-
-    // Child switchlar (rekursiv)
-    const children = sw.children || []
-
-    const childGap = 340
-    let childY = y - ((children.length - 1) * childGap) / 2
-
-    children.forEach((child) => {
-        const childId = `switch-${child.id}`
-
-        result.edges.push({
-            id: `${switchId}-${childId}`,
-            source: switchId,
-            target: childId,
-            type: 'smoothstep',
-            animated: true,
-            label: 'UPLINK',
-            style: { strokeWidth: 2 },
-        })
-
-        addSwitchNode(child, x + 460, childY, result)
-
-        childY += childGap
-    })
-}
-
-const createGraph = () => {
-    const result = { nodes: [], edges: [] }
-
-    let rootY = 500
-
-    topology.value.forEach((root) => {
-        addSwitchNode(root, 500, rootY, result)
-
-        rootY += 1000
     })
 
     nodes.value = result.nodes
@@ -320,6 +305,30 @@ const createGraph = () => {
     }
 }
 
+const resetLayout = () => {
+    Object.keys(positions).forEach((key) => delete positions[key])
+    savePositions()
+    createGraph()
+    refit()
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Ko'rinishni sig'dirish (birinchi yuklanishda va panel ochilib-yopilganda)
+|--------------------------------------------------------------------------
+*/
+
+const { fitView } = useVueFlow()
+
+const refit = () => {
+    nextTick(() => setTimeout(() => fitView({ padding: 0.15, duration: 250 }), 260))
+}
+
+watch(() => !!selectedNode.value, refit)
+
+let firstFit = true
+
 
 /*
 |--------------------------------------------------------------------------
@@ -331,6 +340,11 @@ useAutoRefresh(async () => {
     await loadTopology()
 
     createGraph()
+
+    if (firstFit && nodes.value.length) {
+        firstFit = false
+        refit()
+    }
 })
 
 </script>
